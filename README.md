@@ -2,7 +2,7 @@
 
 Setup and compile:
 ```
-nvcc -o sign sign.cu  -rdc=false -Xptxas -v  -O0  -lineinfo --ptxas-options=-O0
+/usr/local/cuda-12.0/bin/nvcc -o sign sign.cu  -rdc=false -Xptxas -v  -O0  -lineinfo --ptxas-options=-O0
 sudo apt-get purge nvidia*
 sudo apt-get autoremove
 sudo reboot
