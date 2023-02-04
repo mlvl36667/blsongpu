@@ -1,3 +1,4 @@
+
 // compile with nime nvcc -o sign sign.cu  -rdc=false -Xptxas -v  -O0  -lineinfo --ptxas-options=-O0
 // /usr/bin/c++ -DSODIUM_STATIC -I/home/urllc2/bls-signatures/src -I/home/urllc2/bls-signatures/build/_deps/relic-src/include -I/home/urllc2/bls-signatures/build/_deps/relic-build/include -I/home/urllc2/bls-signatures/build/_deps/sodium-src/libsodium/src/libsodium/include -O3 -DNDEBUG -fPIE -std=gnu++17 -MD -MT main.cpp.o -MF main.cpp.o.d -o main.cpp.o -c main.cpp; /usr/bin/c++ -O3 -DNDEBUG main.cpp.o -o runmain  /home/urllc2/bls-signatures/build/src/libbls.a /home/urllc2/bls-signatures/build/_deps/relic-build/lib/librelic_s.a /usr/lib/x86_64-linux-gnu/libgmp.so -lrt -lpthread -lm /home/urllc2/bls-signatures/build/_deps/sodium-build/libsodium.a
 //  sudo apt-get purge nvidia*
@@ -15,6 +16,8 @@
 #include <stdint.h>
 #include<string.h>
 
+#define NBLOCKS 80
+#define NTHREADS 16
 #define INLINE 0
 /** Prime field size in bits. */
 #define FP_PRIME 381
@@ -1714,8 +1717,9 @@ __noinline__
 #endif
 void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         bn_t q, x, y, r;
-        int sign;
+        int sign,i;
 
+//       printf("inside5 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
 // printf("1. bn_div_imp");
         x = (bn_t) malloc(sizeof(bn_st));
 // printf("2. bn_div_imp");
@@ -1728,6 +1732,10 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         q = (bn_t) malloc(sizeof(bn_st));
 // printf("5. bn_div_imp");
         q->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+
+        if (q->dp == NULL) {
+            printf("Fatal: failed to allocate %zu bytes.\n", RLC_BN_SIZE);
+        }
 // printf("6. bn_div_imp");
         q->alloc = RLC_BN_SIZE;
 // printf("7. bn_div_imp");
@@ -1774,30 +1782,28 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         /* If |a| < |b|, we're done. */
 // printf("14. bn_div_imp");
         if (bn_cmp_abs(a, b) == RLC_LT) {
-
 //        printf("bn_cmp_abs(a, b) == RLC_LT...\n");
 //        printf("a->sign: %d\n", a->sign);
 //        printf("b->sign: %d\n", b->sign);
-
-                if (bn_sign(a) == bn_sign(b)) {
+          if (bn_sign(a) == bn_sign(b)) {
 //// printf("15. bn_div_imp");
-                        if (c != NULL) {
-//                        printf("bn_zero ...\n");
-                                bn_zero(c);
-                        }
-                        if (d != NULL) {
-                                bn_copy(d, a);
-                        }
-                } else {
+           if (c != NULL) {
+//          printf("bn_zero ...\n");
+            bn_zero(c);
+           }
+           if (d != NULL) {
+            bn_copy(d, a);
+           }
+           } else {
 // printf("16. bn_div_imp");
-                        if (c != NULL) {
-                                bn_set_dig(c, 1);
-                                bn_neg(c, c);
-                        }
-                        if (d != NULL) {
-                                bn_add(d, a, b);
-                        }
-                }
+           if (c != NULL) {
+            bn_set_dig(c, 1);
+            bn_neg(c, c);
+           }
+           if (d != NULL) {
+            bn_add(d, a, b);
+           }
+           }
 //                printf("Returning from function call...");
                 return;
         }
@@ -1805,14 +1811,25 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
                 /* Be conservative about space for scratch memory, many attempts to
                  * optimize these had invalid reads. */
 // printf("17. bn_div_imp");
+                q->sign = RLC_POS;
+                q->used = 1;
+                dig_t * q2 = q->dp;
+               for (i = 0; i < q->alloc; i++, q2++) {
+//                 printf("i %d: bID %d thID: %d %p\n",i, blockIdx.x, threadIdx.x, (void *) q2);
+                        (*q2) = 0;
+                }
 
                 bn_new_size(x, a->used + 1);
 // printf("18. bn_div_imp");
                 bn_new_size(q, a->used + 1);
+
+
                 bn_new_size(y, a->used + 1);
                 bn_new_size(r, a->used + 1);
 
                 bn_zero(q);
+
+
                 bn_zero(r);
 // printf("19. bn_div_imp");
                 bn_abs(x, a);
@@ -1826,6 +1843,7 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 // printf("20. bn_div_imp");
                 bn_divn_low(q->dp, r->dp, x->dp, a->used, y->dp, b->used);
 // printf("21. bn_div_imp");
+
 
 
                 q->used = a->used - b->used + 1;
@@ -1860,14 +1878,15 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 //	printf ("d4: %" PRIu64 "\n", d->dp[3]);
 //	printf ("d5: %" PRIu64 "\n", d->dp[4]);
 //	printf ("d6: %" PRIu64 "\n", d->dp[5]);
-        free(q->dp);
-        free(q);
-        free(y->dp);
-        free(y);
-        free(r->dp);
-        free(r);
-        free(x->dp);
-        free(x);
+
+                free(q->dp);
+                free(q);
+                free(y->dp);
+                free(y);
+                free(r->dp);
+                free(r);
+                free(x->dp);
+                free(x);
 }
 
 
@@ -2326,6 +2345,7 @@ __device__
 __noinline__
 #endif
 void fp_prime_conv(fp_t c, const bn_t a) {
+/// ebben van a hiba!!!!
  bn_t t; 
  t  = (bn_t ) malloc(sizeof(bn_st));
  t->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
@@ -2341,7 +2361,9 @@ void fp_prime_conv(fp_t c, const bn_t a) {
 // }
  /* Reduce a modulo the prime to ensure bounds. */
 
+
  bn_mod_basic(t, a, shared_prime_bn);
+ return;
 
  if (bn_is_zero(t)) {
   fp_zero(c);
@@ -4149,7 +4171,6 @@ void signmessage(bn_t e, bn_t e2, int sequence){
  bn_st conv;
  bn_st one;
  ep2_t p;
- printf("sequence:  %d \n", sequence);
 // print_line();
 // printf("shared_prime: \n");
 // print_multiple_precision(shared_prime,6);
@@ -4250,6 +4271,8 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 //  print_multiple_precision(shared_u,6);
 //  print_line();
 
+
+//  printf("inside6 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
   fp_prime_conv(ttt[0], e);
   fp_prime_conv(ttt[1], e2);
 
@@ -4545,7 +4568,7 @@ void convert_from_hexa(uint8_t *source_array, uint64_t *target_array, int max_in
 __global__
 void saxpy(uint8_t *prime, uint64_t *prime2)
 {
- bn_t e, e2;
+   bn_t e, e2;
    uint8_t  idx0;
    uint8_t  idx1;
 
@@ -4621,6 +4644,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
 
   signmessage(e,e2, 1);
+  return;
 
 
 ////////////////////////////////////////////////////////////
@@ -4747,14 +4771,22 @@ int main(void)
   cudaMemcpy(cuda_prime, prime, 48*sizeof(uint8_t), cudaMemcpyHostToDevice);
 
   size_t deviceLimit;
-  gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
+    size_t limit = 0;
+    cudaDeviceGetLimit(&limit, cudaLimitStackSize);
+    printf("cudaLimitStackSize: %u\n", (unsigned)limit);
+    cudaDeviceGetLimit(&limit, cudaLimitPrintfFifoSize);
+    printf("cudaLimitPrintfFifoSize: %u\n", (unsigned)limit);
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
+    cudaDeviceGetLimit(&limit, cudaLimitMallocHeapSize);
+    printf("cudaLimitMallocHeapSize: %u\n", (unsigned)limit);
 //  printf("Original Device stack size: %d\n", (int) deviceLimit);
     
   // Recursion's a bitch, gotta increase that stack size
   // (Also relevant for images larger than 400 x 400 or so, I suppose)
   gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 1024));
+
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
-//  printf("New Device stack size: %d\n", (int) deviceLimit);
+  printf("New Device stack size: %d\n", (int) deviceLimit);
 
   cudaEvent_t start, stop;
   float elapsedTime;
@@ -4762,7 +4794,7 @@ int main(void)
   cudaEventCreate(&start);
   cudaEventRecord(start,0);
 
-  saxpy<<<2, 1>>>(cuda_prime, cuda_prime_2);
+  saxpy<<<NBLOCKS, NTHREADS>>>(cuda_prime, cuda_prime_2);
 
   cudaEventCreate(&stop);
   cudaEventRecord(stop,0);

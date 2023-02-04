@@ -1717,9 +1717,9 @@ __noinline__
 #endif
 void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         bn_t q, x, y, r;
-        int sign;
+        int sign,i;
 
-        printf("inside0 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
+//       printf("inside5 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
 // printf("1. bn_div_imp");
         x = (bn_t) malloc(sizeof(bn_st));
 // printf("2. bn_div_imp");
@@ -1732,6 +1732,10 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         q = (bn_t) malloc(sizeof(bn_st));
 // printf("5. bn_div_imp");
         q->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+
+        if (q->dp == NULL) {
+            printf("Fatal: failed to allocate %zu bytes.\n", RLC_BN_SIZE);
+        }
 // printf("6. bn_div_imp");
         q->alloc = RLC_BN_SIZE;
 // printf("7. bn_div_imp");
@@ -1777,32 +1781,29 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 
         /* If |a| < |b|, we're done. */
 // printf("14. bn_div_imp");
-        printf("inside1 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
         if (bn_cmp_abs(a, b) == RLC_LT) {
-
 //        printf("bn_cmp_abs(a, b) == RLC_LT...\n");
 //        printf("a->sign: %d\n", a->sign);
 //        printf("b->sign: %d\n", b->sign);
-
-                if (bn_sign(a) == bn_sign(b)) {
+          if (bn_sign(a) == bn_sign(b)) {
 //// printf("15. bn_div_imp");
-                        if (c != NULL) {
-//                        printf("bn_zero ...\n");
-                                bn_zero(c);
-                        }
-                        if (d != NULL) {
-                                bn_copy(d, a);
-                        }
-                } else {
+           if (c != NULL) {
+//          printf("bn_zero ...\n");
+            bn_zero(c);
+           }
+           if (d != NULL) {
+            bn_copy(d, a);
+           }
+           } else {
 // printf("16. bn_div_imp");
-                        if (c != NULL) {
-                                bn_set_dig(c, 1);
-                                bn_neg(c, c);
-                        }
-                        if (d != NULL) {
-                                bn_add(d, a, b);
-                        }
-                }
+           if (c != NULL) {
+            bn_set_dig(c, 1);
+            bn_neg(c, c);
+           }
+           if (d != NULL) {
+            bn_add(d, a, b);
+           }
+           }
 //                printf("Returning from function call...");
                 return;
         }
@@ -1810,14 +1811,25 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
                 /* Be conservative about space for scratch memory, many attempts to
                  * optimize these had invalid reads. */
 // printf("17. bn_div_imp");
+                q->sign = RLC_POS;
+                q->used = 1;
+                dig_t * q2 = q->dp;
+               for (i = 0; i < q->alloc; i++, q2++) {
+//                 printf("i %d: bID %d thID: %d %p\n",i, blockIdx.x, threadIdx.x, (void *) q2);
+                        (*q2) = 0;
+                }
 
                 bn_new_size(x, a->used + 1);
 // printf("18. bn_div_imp");
                 bn_new_size(q, a->used + 1);
+
+
                 bn_new_size(y, a->used + 1);
                 bn_new_size(r, a->used + 1);
 
                 bn_zero(q);
+
+
                 bn_zero(r);
 // printf("19. bn_div_imp");
                 bn_abs(x, a);
@@ -1826,7 +1838,6 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 //                printf("calling bn_divn_low...\n");
 
                 /* Find the sign. */
-                printf("inside2 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
                 sign = (a->sign == b->sign ? RLC_POS : RLC_NEG);
 
 // printf("20. bn_div_imp");
@@ -1867,14 +1878,15 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 //	printf ("d4: %" PRIu64 "\n", d->dp[3]);
 //	printf ("d5: %" PRIu64 "\n", d->dp[4]);
 //	printf ("d6: %" PRIu64 "\n", d->dp[5]);
-        free(q->dp);
-        free(q);
-        free(y->dp);
-        free(y);
-        free(r->dp);
-        free(r);
-        free(x->dp);
-        free(x);
+
+                free(q->dp);
+                free(q);
+                free(y->dp);
+                free(y);
+                free(r->dp);
+                free(r);
+                free(x->dp);
+                free(x);
 }
 
 
@@ -2349,9 +2361,9 @@ void fp_prime_conv(fp_t c, const bn_t a) {
 // }
  /* Reduce a modulo the prime to ensure bounds. */
 
- printf("inside5 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
 
  bn_mod_basic(t, a, shared_prime_bn);
+ return;
 
  if (bn_is_zero(t)) {
   fp_zero(c);
@@ -4260,11 +4272,10 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 //  print_line();
 
 
-  printf("inside6 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
+//  printf("inside6 bID %d thID: %d \n",blockIdx.x, threadIdx.x);
   fp_prime_conv(ttt[0], e);
   fp_prime_conv(ttt[1], e2);
 
-  return;
   printf("bID %d thID: %d ttt[0] %" PRIu64 " ttt[1] %" PRIu64 "\n",blockIdx.x, threadIdx.x,  *ttt[0], *ttt[1]);
 
 /////////////////////////////////////////////////////////////////////////
@@ -4760,14 +4771,22 @@ int main(void)
   cudaMemcpy(cuda_prime, prime, 48*sizeof(uint8_t), cudaMemcpyHostToDevice);
 
   size_t deviceLimit;
-  gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
+    size_t limit = 0;
+    cudaDeviceGetLimit(&limit, cudaLimitStackSize);
+    printf("cudaLimitStackSize: %u\n", (unsigned)limit);
+    cudaDeviceGetLimit(&limit, cudaLimitPrintfFifoSize);
+    printf("cudaLimitPrintfFifoSize: %u\n", (unsigned)limit);
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
+    cudaDeviceGetLimit(&limit, cudaLimitMallocHeapSize);
+    printf("cudaLimitMallocHeapSize: %u\n", (unsigned)limit);
 //  printf("Original Device stack size: %d\n", (int) deviceLimit);
     
   // Recursion's a bitch, gotta increase that stack size
   // (Also relevant for images larger than 400 x 400 or so, I suppose)
   gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 1024));
+
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
-//  printf("New Device stack size: %d\n", (int) deviceLimit);
+  printf("New Device stack size: %d\n", (int) deviceLimit);
 
   cudaEvent_t start, stop;
   float elapsedTime;
