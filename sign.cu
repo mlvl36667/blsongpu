@@ -26,7 +26,7 @@
 #define fp_null(A)                      /* empty */
 #define fp_new(A)                       /* empty */
 #define bn_null(A)                      /* empty */
-#define FP_RDC   MONTY
+#define FP_RDC   BASIC
 #define PROJC    2
 /** Use -1 as quadratic non-residue. */
 #define FP_QNRES
@@ -1959,31 +1959,31 @@ void fp_rdc_basic(fp_t c, dv_t a) {
         t2 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
         t3 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
-    printf("RLC_DV_DIGS %d , RLC_FP_DIGS %d inside fp_rdc_basic...\n",RLC_DV_DIGS, RLC_FP_DIGS );
+//   printf("RLC_DV_DIGS %d , RLC_FP_DIGS %d inside fp_rdc_basic...\n",RLC_DV_DIGS, RLC_FP_DIGS );
 
-  printf("a in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *a);
+//  printf("a in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *a);
 
         dv_copy(t2, a, 2 * RLC_FP_DIGS);
-  printf("t2 in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *t2);
+//  printf("t2 in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *t2);
         dv_copy(t3, shared_prime, RLC_FP_DIGS);
 
-  printf("t3 in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *t3);
-  printf("t2 in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *t2);
+//  printf("t3 in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *t3);
+//  printf("t2 in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *t2);
 // itt a t/knek tul kicsi hely van foglalva es tul fogjak cimezni egymast....
 
         bn_divn_low(t0, t1, t2, 2 * RLC_FP_DIGS, t3, RLC_FP_DIGS);
 
-  printf("t0 in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *t0);
-  printf("t1 in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *t1);
+//  printf("t0 in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *t0);
+//  printf("t1 in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *t1);
         fp_copy(c, t1);
-  printf("c in fp_rdc_basic: \n ");
-  printf("%" PRIu64 "\n", *c);
+//  printf("c in fp_rdc_basic: \n ");
+//  printf("%" PRIu64 "\n", *c);
 //        printf("leaving fp_rdc_basic...\n");
         free(t0);
         free(t1);
@@ -2094,38 +2094,38 @@ void fp_sqr_basic(fp_t c, const fp_t a) {
         dv_t t;
 
         t = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
-  printf("entering  fp_sqr_basic \n");
-  printf("(RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t): %d\n",(RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
+//  printf("entering  fp_sqr_basic \n");
+//  printf("(RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t): %d\n",(RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
+//
+//  printf("RLC_DV_DIGS  %d\n",RLC_DV_DIGS );
+//  printf("FP_PRIME  %d\n",FP_PRIME );
+//  printf("RLC_FP_DIGS  %d\n",RLC_FP_DIGS );
+//  printf("RLC_DIG  %d\n",RLC_DIG );
+//  printf("RLC_BN_SIZE  %d\n",RLC_BN_SIZE );
 
-  printf("RLC_DV_DIGS  %d\n",RLC_DV_DIGS );
-  printf("FP_PRIME  %d\n",FP_PRIME );
-  printf("RLC_FP_DIGS  %d\n",RLC_FP_DIGS );
-  printf("RLC_DIG  %d\n",RLC_DIG );
-  printf("RLC_BN_SIZE  %d\n",RLC_BN_SIZE );
 
-
-  printf("a in fp_sqr_basic: \n ");
-  printf("%" PRIu64 "\n", *a);
+//  printf("a in fp_sqr_basic: \n ");
+//  printf("%" PRIu64 "\n", *a);
 //        dv_null(t);
 //        dv_new(t);
         dv_zero(t, 2 * RLC_FP_DIGS);
-  printf("t in fp_sqr_basic: \n ");
-  printf("%" PRIu64 "\n", *t);
+//  printf("t in fp_sqr_basic: \n ");
+//  printf("%" PRIu64 "\n", *t);
         for (i = 0; i < RLC_FP_DIGS - 1; i++) {
                 t[RLC_FP_DIGS + i + 1] =
                                 bn_sqra_low(t + 2 * i, a + i, RLC_FP_DIGS - i);
         }
-  printf("2. t in fp_sqr_basic: \n ");
-  printf("%" PRIu64 "\n", *t);
+//  printf("2. t in fp_sqr_basic: \n ");
+//  printf("%" PRIu64 "\n", *t);
         bn_sqra_low(t + 2 * i, a + i, 1);
-  printf("3. t in fp_sqr_basic: \n ");
-  printf("%" PRIu64 "\n", *t);
-  printf("calling fp_rdc_basic... \n ");
+//  printf("3. t in fp_sqr_basic: \n ");
+//  printf("%" PRIu64 "\n", *t);
+//  printf("calling fp_rdc_basic... \n ");
         fp_rdc_basic(c, t);
-  printf("4. c in fp_sqr_basic: \n ");
-  printf("%" PRIu64 "\n", *c);
+//  printf("4. c in fp_sqr_basic: \n ");
+//  printf("%" PRIu64 "\n", *c);
         free(t);
-        printf("leaving  fp_sqr_basic \n");
+//        printf("leaving  fp_sqr_basic \n");
 }
 __device__
 #if INLINE == 0
@@ -2349,15 +2349,15 @@ void fp_prime_conv(fp_t c, const bn_t a) {
 // }
  /* Reduce a modulo the prime to ensure bounds. */
 
-                printf("\n printing in fp_prime_conv.... \n");
-                for(int i=0; i < a->used; i++){
-                 printf("a %d %" PRIu64 " \n",i, a->dp[i]);
-                }
+//                printf("\n printing in fp_prime_conv.... \n");
+//                for(int i=0; i < a->used; i++){
+//                 printf("a %d %" PRIu64 " \n",i, a->dp[i]);
+//                }
  bn_mod_basic(t, a, shared_prime_bn);
-                for(int i=0; i < t->used; i++){
-                 printf("t %d %" PRIu64 " \n",i, t->dp[i]);
-                }
-
+//                for(int i=0; i < t->used; i++){
+//                 printf("t %d %" PRIu64 " \n",i, t->dp[i]);
+//                }
+//
 
 
  if (bn_is_zero(t)) {
@@ -2562,12 +2562,12 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
 //  print_multiple_precision(b->dp,6);
 //  print_line();
 
-  printf("inside fp_exp_basic...\n");
-  printf("a: \n ");
-  printf("%" PRIu64 "\n", *a);
-  printf("b: \n ");
-  printf("%" PRIu64 "\n", b->dp[0]);
- printf("1. fp_exp_basic // ");
+//  printf("inside fp_exp_basic...\n");
+//  printf("a: \n ");
+//  printf("%" PRIu64 "\n", *a);
+//  printf("b: \n ");
+//  printf("%" PRIu64 "\n", b->dp[0]);
+// printf("1. fp_exp_basic // ");
         fp_t r;
         r = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
         if(r == NULL){
@@ -2583,18 +2583,18 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         if(r == NULL){
          printf("r has problems...\n");
         }
-  printf("l: %d \n ", l);
+//  printf("l: %d \n ", l);
 
 //  printf("first r: \n ");
 //  printf("%" PRIu64 "\n", *r);
 
         for (i = l - 2; i >= 0; i--) {
 // printf("9. fp_exp_basic // ");
-         printf("1. %d. r %" PRIu64 "\n",i, *r);
+//         printf("1. %d. r %" PRIu64 "\n",i, *r);
 
 
          fp_sqr_basic(r, r);
-         printf("2. %d. r %" PRIu64 "\n",i, *r);
+//         printf("2. %d. r %" PRIu64 "\n",i, *r);
 //  printf("%d r: \n ", i);
 //  printf("%" PRIu64 "\n", *r);
 
@@ -3134,6 +3134,26 @@ void fp2_inv(fp2_t c, fp2_t a) {
 
  
 }
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+dig_t fp_add1_low(dig_t *c, const dig_t *a, dig_t digit) {
+        int i;
+        dig_t carry, r0;
+
+        carry = digit;
+        for (i = 0; i < RLC_FP_DIGS && carry; i++, a++, c++) {
+                r0 = (*a) + carry;
+                carry = (r0 < carry);
+                (*c) = r0;
+        }
+        for (; i < RLC_FP_DIGS; i++, a++, c++) {
+                (*c) = (*a);
+        }
+        return carry;
+}
+
 __device__
 #if INLINE == 0
 __noinline__
@@ -4217,37 +4237,37 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 // Multiply by the Montgomery reduced prime (u)
   bn_set_dig(&one, 1);
 
- printf("\n---- one --- \n");
- for(int i=0; i < one.used; i++){
-  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
- }
+// printf("\n---- one --- \n");
+// for(int i=0; i < one.used; i++){
+//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
+// }
 //  printf("1. one: \n");
 //  print_multiple_precision(one.dp,6);
 //  print_line();
   bn_lsh(&one, &one, RLC_FP_DIGS * RLC_DIG);
- printf("\n---- one 1--- \n");
- for(int i=0; i < one.used; i++){
-  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
- }
+// printf("\n---- one 1--- \n");
+// for(int i=0; i < one.used; i++){
+//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
+// }
 //  printf("2. one: \n");
 //  print_multiple_precision(one.dp,6);
 //  print_line();
 
 // Calculate 1 mod p
   bn_mod_basic(&one, &one, m);
- printf("\n---- one 2--- \n");
- for(int i=0; i < one.used; i++){
-  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
- }
+// printf("\n---- one 2--- \n");
+// for(int i=0; i < one.used; i++){
+//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
+// }
 //  printf("3. one: \n");
 //  print_multiple_precision(one.dp,6);
 //  print_line();
   r = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
   fp_add_basic(r, one.dp, one.dp);
- printf("\n---- one 3--- \n");
- for(int i=0; i < one.used; i++){
-  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
- }
+// printf("\n---- one 3--- \n");
+// for(int i=0; i < one.used; i++){
+//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
+// }
   tt = (bn_t ) malloc(sizeof(bn_st));
   tt->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
   tt->alloc = RLC_BN_SIZE;
@@ -4261,20 +4281,20 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 //  printf("u: \n");
 //  print_multiple_precision(u->dp,6);
 //  print_line();
- printf("\n---- u  --- \n");
- for(int i=0; i < u->used; i++){
-  printf("u %d %" PRIu64 " \n",i, u->dp[i]);
- }
- printf("\n---- t --- \n");
+// printf("\n---- u  --- \n");
+// for(int i=0; i < u->used; i++){
+//  printf("u %d %" PRIu64 " \n",i, u->dp[i]);
+// }
+// printf("\n---- t --- \n");
 
   fp_exp_basic(conv.dp, r, u);
   conv.used = RLC_FP_DIGS;
   bn_trim(&(conv));
 
- printf("\n---- conv --- \n");
- for(int i=0; i < conv.used; i++){
-  printf("conv %d %" PRIu64 " \n",i, conv.dp[i]);
- }
+// printf("\n---- conv --- \n");
+// for(int i=0; i < conv.used; i++){
+//  printf("conv %d %" PRIu64 " \n",i, conv.dp[i]);
+// }
 /////////////////////////////////////////////////////////////////////////
 // Ez nagyon gany megoldas...
   shared_conv[0] = conv.dp[0];
@@ -4543,7 +4563,7 @@ void bn_read_bin(bn_t a, const uint8_t *bin, int len) {
 
          }
          a->dp[i] = d;
- printf("a->dp[i] %" PRIu64 " \n", a->dp[i]);
+// printf("a->dp[i] %" PRIu64 " \n", a->dp[i]);
 
 
  } 
@@ -4555,7 +4575,7 @@ void bn_read_bin(bn_t a, const uint8_t *bin, int len) {
          }
  }
  a->dp[i] = d;
- printf("a->dp[i] %" PRIu64 " \n", a->dp[i]);
+// printf("a->dp[i] %" PRIu64 " \n", a->dp[i]);
  a->sign = RLC_POS;
  bn_trim(a);
 
@@ -4659,10 +4679,10 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
  uint8_t *msg;
 
- char message_string_4[513] = "8b60d955981bdf47e1faa217a55a8145eb23464d306ac4a53445a89877450d7a830b355d81c37f823b356a41bfbb8e697e7ecb50815a826c0e29b2cdd3ae980ac5e24aba82d49f67a3a274c3b645a0c625cf38b8589134d99d972ad7781d1c197fab1bed27ea3d59160684ce9c9984ded317133cd3f11f39ee6a03dc24447379c050f729bc698b4a71b3530199615135f3c2cfef95a5e900a097e46749f5e545681f77a287ec9a5bbaf84ae7f6a304f8b2b73c721ebe3bbfde6e413462a9fac58526e5476a6d029723225a623241b6d49530642df7d0629584134c4db97939041b38949db2af6a62f8b5939b77d03a1ab86721ed1d9a79bb114a7dfb8d4da0dd";
+ char message_string_1[513] = "8b60d955981bdf47e1faa217a55a8145eb23464d306ac4a53445a89877450d7a830b355d81c37f823b356a41bfbb8e697e7ecb50815a826c0e29b2cdd3ae980ac5e24aba82d49f67a3a274c3b645a0c625cf38b8589134d99d972ad7781d1c197fab1bed27ea3d59160684ce9c9984ded317133cd3f11f39ee6a03dc24447379c050f729bc698b4a71b3530199615135f3c2cfef95a5e900a097e46749f5e545681f77a287ec9a5bbaf84ae7f6a304f8b2b73c721ebe3bbfde6e413462a9fac58526e5476a6d029723225a623241b6d49530642df7d0629584134c4db97939041b38949db2af6a62f8b5939b77d03a1ab86721ed1d9a79bb114a7dfb8d4da0dd";
  char message_string_2[513] = "975a7a3edf0c907a8670af92ed36b3a1e94940ed8d4fe0e54592e0a4d6527b5bd6fd4cb9968d760b68be1dc82f576a6a73cc0714e02e353ad6d510f5dfc7f02479abf7ee20e927345cc36b408d3fcd05729fdf18f74f4ad91cc4bd50d3795fe5cfbbfb060689552b39e996fcece89e258b7db611a41c271216af110d493e81e96f9b1aa1696ef41c6573563e84c547de86f18d3ea897956dda7ca5101a47138c906602acf2ebd4cc1c8411b1e4f83825eaacbe54c9ed8a5ae2df3dd04bc77f223e03d78e10ca95d59de0bc047dd33e5a170473d8f70d94bf467ed9684a1ed05cff88779990ba1aa0832005af2a19be3cdd46e68094ed0ba34789c80f24d5f07f";
  char message_string_3[513] = "3d762157e3c4566456bb1a25654b4c17dcc15079d6343a54b76723a2da8580e22fcab914a229f2885d46ce3ac0beb3d1a64a26b1b166acb26b284b25586e1f8d0f3ee175ab69ad80ab1fb623623d1cd750b28c5ba6062d0573ab2b66a83457afce074f5179b8b849fc82d8957121c7bc73b48a64c59e3bd51533769bcb48a61190acf98407ea195ca53ec47b1261227f2fb2652436c094990482889d569b310991c4ae7dcddb375c956a705841a9c5fc87acef7c35f461b4f26d5031b3ce6857f90c78ce931c006f61a3410fef514e1070d07d15cc429d42a86edae22a3650777e94810e873728cc769704660d07a488d3d8efc503fb8c7fdc5de06743fb4936";
- char message_string_1[513] = "ba98b1e9b1a3b1b93790fee7a424e5f693f10f1f1f78a0dc3d304088f571b9778f89e3b838f2266df2f0d395ebe9f7bfc5f9aab9b3c87365290c7bb747b76a02d1bad55ecc25802d5aa7dc267bb824bfca7bdd211a7e62f18cfc4463d8160d375f4750c836eeffebfbdb9a7e7512f4ee0b0d48806d81a2e32ca3bad3e118e0febd26cb33daabc609fdb818e4b84b44dd690483b222edbdfb9ab94413639fa319213bd51c8d866e48d1edfcefad45295fa1289a92e10aca0d617bb9079a37ca83943a66aefb48580d9a4f3cb7289ed1f1baf19bb99f1a837d3e5b4cae92033e55321cd401bcd94494f42ae819bd924c6a01414a2e8334295eab85f03c30bd053d";
+ char message_string_4[513] = "b629a33baa2f71304e6a1f84eed5ab383a23bb055b1442795bcd7ac4fba664c5e178dba9737570dd6ded5f73fd3fbbac25f559e84f2154d8ab0d32442da10a60fc830f54bbfc0b19ba723b0bc4177b96c5fc6aa77cee05ef80163fca2b5b92145c7004beef09abab3d52c6989da26ee0e8c4d63587b8e6127279d5abf4b520becfcd98c2163f82d7f1777d5559fc77ad040bbb8b933780211a5ef359f70788f95773612f69638cae550aed382d68a4be0c194139e7b3069126b2dad1d6e5d8fe5cfc8d5a90c783f1ebab25d095776172a66d9afdb16d7c289ad89c93dda54c7b0cf86991a200ff0e858573796cf396e6ae77470b4dd2d61267f5716de16b199f";
  convert_from_hexa(prime,prime2, 6, 8);
  for(int i=0; i < 6; i++){
   shared_prime[i] = prime2[i];
@@ -4698,7 +4718,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
 
   signmessage(e,e2, 1);
-  return;
+//  return;
 
 
 ////////////////////////////////////////////////////////////
