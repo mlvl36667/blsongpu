@@ -16,8 +16,8 @@
 #include <stdint.h>
 #include<string.h>
 
-#define NBLOCKS 80
-#define NTHREADS 16
+#define NBLOCKS 1
+#define NTHREADS 1
 #define INLINE 0
 /** Prime field size in bits. */
 #define FP_PRIME 381
@@ -4494,6 +4494,12 @@ void bn_read_bin(bn_t a, const uint8_t *bin, int len) {
  bn_grow(a, digs);
  bn_zero(a);
  a->used = digs;
+ 
+ printf("\n-------------------\n");
+ for (i = 0; i < len; i++) {
+  printf("%02x",bin[i]);
+ }
+ printf("\n-------------------\n");
  for (i = 0; i < digs - 1; i++) {
          d = 0; 
          for (j = (RLC_DIG / 8) - 1; j >= 0; j--) {
@@ -4644,7 +4650,6 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
 
   signmessage(e,e2, 1);
-  return;
 
 
 ////////////////////////////////////////////////////////////
