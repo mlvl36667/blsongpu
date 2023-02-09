@@ -14,6 +14,9 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include<string.h>
+#include <stdarg.h>
+#include <ctype.h>
+
 
 #define NBLOCKS 1
 #define NTHREADS 1
@@ -3756,10 +3759,12 @@ __noinline__
 #endif
 void fp_read_str(fp_t a, const char *str, int len, int radix) {
  bn_t t;
+
  t  = (bn_t ) malloc(sizeof(bn_st));
  t->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
  t->alloc = RLC_BN_SIZE;
  t->sign = RLC_POS;
+
  bn_read_str(t, str, len, radix);
  if (bn_is_zero(t)) {
   fp_zero(a);
@@ -4033,11 +4038,11 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 
  u       = shared_map_u;
 
-// print_line();
-// printf("u after fp_read_str ... \n");
-// print_multiple_precision(shared_map_u[0],1);
-// print_multiple_precision(shared_map_u[1],1);
-// printf("now precomputing the isomap constants...\n");
+ print_line();
+ printf("u after fp_read_str ... \n");
+ print_multiple_precision(shared_map_u[0],1);
+ print_multiple_precision(shared_map_u[1],1);
+ printf("now precomputing the isomap constants...\n");
  /* SSWU map constants */
  /* constants 3 and 4 are a and b for the curve or isogeny */
  shared_c[0][0]   = (fp_t )malloc(RLC_BN_SIZE * sizeof(dig_t));
@@ -4057,7 +4062,13 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 // Precomputation ends here //
 // Compute the SSWU Map
  printf("Computing the SSWU map ...\n");
+
+ print_line();
+ printf("operand... \n");
+ print_multiple_precision(t[0],1);
+
  fp2_sqr_basic(t0, t);
+
  fp2_mul_basic(t0, t0, u);  /* t0 = u * t^2 */
  fp2_sqr_basic(t1, t0);     /* t1 = u^2 * t^4 */
  fp2_add_basic(t2, t1, t0); /* t2 = u^2 * t^4 + u * t^2 */ 
@@ -4180,6 +4191,93 @@ void ep2_curve_set_ctmap(const char *a0_str, const char *a1_str, const char *b0_
 //        printf("xd: %d\n", shared_coeffs->deg_xd);
 //        printf("yn: %d\n", shared_coeffs->deg_yn);
 //        printf("yd: %d\n", shared_coeffs->deg_yd);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void bn_read_raw(bn_t a, const dig_t *raw, int len) {
+ bn_grow(a, len); 
+ a->used = len;  
+ a->sign = RLC_POS;
+ dv_copy(a->dp, raw, len);
+ bn_trim(a);
+} 
+//__device__
+//#if INLINE == 0
+//__noinline__
+//#endif
+//void util_print(const char *format, ...) {
+//        va_list list;
+//        va_start(list, format);
+//        vprintf(format, list);
+//        fflush(stdout);
+//        va_end(list);
+//}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void util_print_dig(dig_t a, int pad) {
+if (pad) {
+ printf("%.16" PRIX64, (uint64_t) a);
+ } else {
+ printf("%" PRIX64, (uint64_t) a);
+}
+///if (pad) {
+/// util_print("%.16" PRIX64, (uint64_t) a);
+/// } else {
+/// util_print("%" PRIX64, (uint64_t) a);
+///}
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp_print(const fp_t a) {
+        int i;
+        bn_t t;
+
+
+ t  = (bn_t ) malloc(sizeof(bn_st));
+ t->dp = (dig_t* ) malloc(RLC_FP_DIGS * sizeof(dig_t));
+ t->alloc = RLC_FP_DIGS;
+ t->sign = RLC_POS;
+
+//#if FP_RDC == MONTY
+//                if (a != fp_prime_get()) {
+//                        fp_prime_back(t, a);
+//                } else {
+//                        bn_read_raw(t, a, RLC_FP_DIGS);
+//                }
+//#else
+                bn_read_raw(t, a, RLC_FP_DIGS);
+//#endif
+
+                for (i = RLC_FP_DIGS - 1; i > 0; i--) {
+                        if (i >= t->used) {
+                                util_print_dig(0, 1);
+                        } else {
+                                util_print_dig(t->dp[i], 1);
+                        }
+                        printf(" ");
+                }
+                util_print_dig(t->dp[0], 1);
+                printf("\n");
+
+// Ez lehet hogy majd okoz memóriaszivárgást...
+//                bn_free(t);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_print(fp2_t a) {
+        fp_print(a[0]);
+        fp_print(a[1]);
 }
 
 
@@ -4332,6 +4430,8 @@ void signmessage(bn_t e, bn_t e2, int sequence){
   fp_prime_conv(ttt[1], e2);
 
   printf("bID %d thID: %d ttt[0] %" PRIu64 " ttt[1] %" PRIu64 "\n",blockIdx.x, threadIdx.x,  *ttt[0], *ttt[1]);
+  fp_print(ttt[0]);
+  fp_print(ttt[1]);
 
 /////////////////////////////////////////////////////////////////////////
   /* sign of t */                                                                
@@ -4679,7 +4779,10 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
  uint8_t *msg;
 
- char message_string_1[513] = "8b60d955981bdf47e1faa217a55a8145eb23464d306ac4a53445a89877450d7a830b355d81c37f823b356a41bfbb8e697e7ecb50815a826c0e29b2cdd3ae980ac5e24aba82d49f67a3a274c3b645a0c625cf38b8589134d99d972ad7781d1c197fab1bed27ea3d59160684ce9c9984ded317133cd3f11f39ee6a03dc24447379c050f729bc698b4a71b3530199615135f3c2cfef95a5e900a097e46749f5e545681f77a287ec9a5bbaf84ae7f6a304f8b2b73c721ebe3bbfde6e413462a9fac58526e5476a6d029723225a623241b6d49530642df7d0629584134c4db97939041b38949db2af6a62f8b5939b77d03a1ab86721ed1d9a79bb114a7dfb8d4da0dd";
+ char message_string_1[513] = "b629a33baa2f71304e6a1f84eed5ab383a23bb055b1442795bcd7ac4fba664c5e178dba9737570dd6ded5f73fd3fbbac25f559e84f2154d8ab0d32442da10a60fc830f54bbfc0b19ba723b0bc4177b96c5fc6aa77cee05ef80163fca2b5b92145c7004beef09abab3d52c6989da26ee0e8c4d63587b8e6127279d5abf4b520becfcd98c2163f82d7f1777d5559fc77ad040bbb8b933780211a5ef359f70788f95773612f69638cae550aed382d68a4be0c194139e7b3069126b2dad1d6e5d8fe5cfc8d5a90c783f1ebab25d095776172a66d9afdb16d7c289ad89c93dda54c7b0cf86991a200ff0e858573796cf396e6ae77470b4dd2d61267f5716de16b199f";
+// 15CC3F292D66704A 62687D6E2DCB5913 7C9E20D357539F96 9F51EABD020D64E0 81792D01F15CC248 1D44777B8BAFC9FD ttt[0]
+// 147765C676F3B800 6798BA4300F29F76 27CBE052A3D0397E CE0A4A7079E5EFEF 45DECCC08A4147E2 345BA7EC94B37852 ttt[1]
+
  char message_string_2[513] = "975a7a3edf0c907a8670af92ed36b3a1e94940ed8d4fe0e54592e0a4d6527b5bd6fd4cb9968d760b68be1dc82f576a6a73cc0714e02e353ad6d510f5dfc7f02479abf7ee20e927345cc36b408d3fcd05729fdf18f74f4ad91cc4bd50d3795fe5cfbbfb060689552b39e996fcece89e258b7db611a41c271216af110d493e81e96f9b1aa1696ef41c6573563e84c547de86f18d3ea897956dda7ca5101a47138c906602acf2ebd4cc1c8411b1e4f83825eaacbe54c9ed8a5ae2df3dd04bc77f223e03d78e10ca95d59de0bc047dd33e5a170473d8f70d94bf467ed9684a1ed05cff88779990ba1aa0832005af2a19be3cdd46e68094ed0ba34789c80f24d5f07f";
  char message_string_3[513] = "3d762157e3c4566456bb1a25654b4c17dcc15079d6343a54b76723a2da8580e22fcab914a229f2885d46ce3ac0beb3d1a64a26b1b166acb26b284b25586e1f8d0f3ee175ab69ad80ab1fb623623d1cd750b28c5ba6062d0573ab2b66a83457afce074f5179b8b849fc82d8957121c7bc73b48a64c59e3bd51533769bcb48a61190acf98407ea195ca53ec47b1261227f2fb2652436c094990482889d569b310991c4ae7dcddb375c956a705841a9c5fc87acef7c35f461b4f26d5031b3ce6857f90c78ce931c006f61a3410fef514e1070d07d15cc429d42a86edae22a3650777e94810e873728cc769704660d07a488d3d8efc503fb8c7fdc5de06743fb4936";
  char message_string_4[513] = "b629a33baa2f71304e6a1f84eed5ab383a23bb055b1442795bcd7ac4fba664c5e178dba9737570dd6ded5f73fd3fbbac25f559e84f2154d8ab0d32442da10a60fc830f54bbfc0b19ba723b0bc4177b96c5fc6aa77cee05ef80163fca2b5b92145c7004beef09abab3d52c6989da26ee0e8c4d63587b8e6127279d5abf4b520becfcd98c2163f82d7f1777d5559fc77ad040bbb8b933780211a5ef359f70788f95773612f69638cae550aed382d68a4be0c194139e7b3069126b2dad1d6e5d8fe5cfc8d5a90c783f1ebab25d095776172a66d9afdb16d7c289ad89c93dda54c7b0cf86991a200ff0e858573796cf396e6ae77470b4dd2d61267f5716de16b199f";
@@ -4718,7 +4821,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
 
   signmessage(e,e2, 1);
-//  return;
+  return;
 
 
 ////////////////////////////////////////////////////////////
