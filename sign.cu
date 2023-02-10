@@ -3096,157 +3096,50 @@ __noinline__
 void fp2_inv(fp2_t c, fp2_t a) {
 	fp_t t0, t1;
 
-//       printf("INPUT in fp2_inv... \n");
-//       printf ("a0 %" PRIu64 "\n", *(a[0]) );
-//       printf ("a1 %" PRIu64 "\n", *(a[0] + 1) );
-//       printf ("a2 %" PRIu64 "\n", *(a[0] + 2) );
-//       printf ("a3 %" PRIu64 "\n", *(a[0] + 3) );
-//       printf ("a4 %" PRIu64 "\n", *(a[0] + 4) );
-//       printf ("a5 %" PRIu64 "\n", *(a[0] + 5) );
 
-// printf("1. fp2_inv ...\n");
         t0 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("2. fp2_inv ...\n");
         t1 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("3. fp2_inv ...\n");
 		/* t0 = a_0^2, t1 = a_1^2. */
 		fp_sqr(t0, a[0]);
-//       printf("1. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
-// printf("4. fp2_inv ...\n");
 		fp_sqr(t1, a[1]);
-//       printf("2. t1 ... \n");
-//       printf ("t10 %" PRIu64 "\n", *(t1) );
-//       printf ("t11 %" PRIu64 "\n", *(t1 + 1) );
-//       printf ("t12 %" PRIu64 "\n", *(t1 + 2) );
-//       printf ("t13 %" PRIu64 "\n", *(t1 + 3) );
-//       printf ("t14 %" PRIu64 "\n", *(t1 + 4) );
-//       printf ("t15 %" PRIu64 "\n", *(t1 + 5) );
 
-// printf("5. fp2_inv ...\n");
 		/* t1 = 1/(a_0^2 + a_1^2). */
 #ifndef FP_QNRES
 		if (fp_prime_get_qnr() != -1) {
 			if (fp_prime_get_qnr() == -2) {
-// printf("6. fp2_inv ...\n");
 				fp_dbl(t1, t1);
-//       printf("3. t1 ... \n");
-//       printf ("t10 %" PRIu64 "\n", *(t1) );
-//       printf ("t11 %" PRIu64 "\n", *(t1 + 1) );
-//       printf ("t12 %" PRIu64 "\n", *(t1 + 2) );
-//       printf ("t13 %" PRIu64 "\n", *(t1 + 3) );
-//       printf ("t14 %" PRIu64 "\n", *(t1 + 4) );
-//       printf ("t15 %" PRIu64 "\n", *(t1 + 5) );
 
-// printf("7. fp2_inv ...\n");
 				fp_add(t0, t0, t1);
-//       printf("4. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
 
 			} else {
 				if (fp_prime_get_qnr() < 0) {
-// printf("8. fp2_inv ...\n");
 					fp_mul_dig(t1, t1, -fp_prime_get_qnr());
-//       printf("5. t1 ... \n");
-//       printf ("t10 %" PRIu64 "\n", *(t1) );
-//       printf ("t11 %" PRIu64 "\n", *(t1 + 1) );
-//       printf ("t12 %" PRIu64 "\n", *(t1 + 2) );
-//       printf ("t13 %" PRIu64 "\n", *(t1 + 3) );
-//       printf ("t14 %" PRIu64 "\n", *(t1 + 4) );
-//       printf ("t15 %" PRIu64 "\n", *(t1 + 5) );
 
-// printf("9. fp2_inv ...\n");
 					fp_add(t0, t0, t1);
-//       printf("6. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
 
 				} else {
-// printf("10. fp2_inv ...\n");
 					fp_mul_dig(t1, t1, fp_prime_get_qnr());
-//       printf("8. t1 ... \n");
-//       printf ("t10 %" PRIu64 "\n", *(t1) );
-//       printf ("t11 %" PRIu64 "\n", *(t1 + 1) );
-//       printf ("t12 %" PRIu64 "\n", *(t1 + 2) );
-//       printf ("t13 %" PRIu64 "\n", *(t1 + 3) );
-//       printf ("t14 %" PRIu64 "\n", *(t1 + 4) );
-//       printf ("t15 %" PRIu64 "\n", *(t1 + 5) );
 
 					fp_sub(t0, t0, t1);
-//       printf("7. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
 				}
 			}
 		} else {
 
 			fp_add(t0, t0, t1);
-//       printf("10. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
 
 		}
 #else
 		fp_add(t0, t0, t1);
-//       printf("11. t0 ... \n");
-//       printf ("t00 %" PRIu64 "\n", *(t0) );
-//       printf ("t01 %" PRIu64 "\n", *(t0 + 1) );
-//       printf ("t02 %" PRIu64 "\n", *(t0 + 2) );
-//       printf ("t03 %" PRIu64 "\n", *(t0 + 3) );
-//       printf ("t04 %" PRIu64 "\n", *(t0 + 4) );
-//       printf ("t05 %" PRIu64 "\n", *(t0 + 5) );
 #endif
-// printf("11. fp2_inv ...\n");
 		fp_inv(t1, t0);
-//       printf("9. t1 ... \n");
-//       printf ("t10 %" PRIu64 "\n", *(t1) );
-//       printf ("t11 %" PRIu64 "\n", *(t1 + 1) );
-//       printf ("t12 %" PRIu64 "\n", *(t1 + 2) );
-//       printf ("t13 %" PRIu64 "\n", *(t1 + 3) );
-//       printf ("t14 %" PRIu64 "\n", *(t1 + 4) );
-//       printf ("t15 %" PRIu64 "\n", *(t1 + 5) );
 
-// printf("12. fp2_inv ...\n");
 		/* c_0 = a_0/(a_0^2 + a_1^2). */
 		fp_mul(c[0], a[0], t1);
-// printf("13. fp2_inv ...\n");
 		/* c_1 = - a_1/(a_0^2 + a_1^2). */
 		fp_mul(c[1], a[1], t1);
-// printf("14. fp2_inv ...\n");
 		fp_neg(c[1], c[1]);
-// printf("15. fp2_inv ...\n");
  free(t0);
  free(t1);
-// printf("leaving fp2_inv ...\n");
-//       printf("result in fp2_inv... \n");
-//       printf ("c0 %" PRIu64 "\n", *(c[0]) );
-//       printf ("c1 %" PRIu64 "\n", *(c[0] + 1) );
-//       printf ("c2 %" PRIu64 "\n", *(c[0] + 2) );
-//       printf ("c3 %" PRIu64 "\n", *(c[0] + 3) );
-//       printf ("c4 %" PRIu64 "\n", *(c[0] + 4) );
-//       printf ("c5 %" PRIu64 "\n", *(c[0] + 5) );
 
  
 }
@@ -3343,16 +3236,11 @@ __noinline__
 int fp2_sgn0(const fp2_t t, bn_t k) {
         const int t_0_zero = fp_is_zero(t[0]);
 
-//        printf("1. fp2_sgn0 called, now iside...\n");
         fp_prime_back(k, t[0]);
-//        printf("2. fp2_sgn0 called, now iside...\n");
         const int t_0_neg = bn_get_bit(k, 0);
-//        printf("3. fp2_sgn0 called, now iside...\n");
 
         fp_prime_back(k, t[1]);
-//        printf("4. fp2_sgn0 called, now iside...\n");
         const int t_1_neg = bn_get_bit(k, 0);
-//        printf("5. fp2_sgn0 called, now iside...\n");
 
         /* t[0] == 0 ? sgn0(t[1]) : sgn0(t[0]) */
         return t_0_neg | (t_0_zero & t_1_neg);
@@ -4246,11 +4134,17 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
                                                                               
  /* compute x1, g(x1) */                                                    
  printf("compute x1, g(x1)... \n");
+ printf("mBoverA: \n");
+ fp2_print(mBoverA);
  fp2_mul_basic(p->x, t2, mBoverA); /* -B / A * (1 + 1 / (u^2 * t^4 + u * t^2)) */
+ printf("p->x: \n");
+ fp2_print(p->x);
  fp2_sqr_basic(p->y, p->x);        /* x^2 */                                    
  fp2_add_basic(p->y, p->y, a);     /* x^2 + a */                               
  fp2_mul_basic(p->y, p->y, p->x);  /* x^3 + a x */                            
  fp2_add_basic(p->y, p->y, b);     /* x^3 + a x + b */                       
+ printf("x^3 + a x + b: \n");
+ fp2_print(p->y);
  printf("compute x1, g(x1) finished... \n");
  /* compute x2, g(x2) */                                            
  printf("compute x2, g(x2) ... \n");
@@ -4263,6 +4157,9 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 //  /* Avoiding a second sqrt relies on knowing the 2-adicity of the modulus. */ 
   if (!fp2_srt(p->y, p->y)) {                                                 
           /* try x2, g(x2) */                                                
+          printf("(p->y)^(1/2): \n");               
+                        fp2_print(p->y); 
+
           fp2_copy(p->x, t2);                                               
           if (!fp2_srt(p->y, t3)) {                                        
                   printf("+++++++++ Error +++++++++ \n");
