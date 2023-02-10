@@ -2753,6 +2753,14 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp2_sqr(fp2_t c, fp2_t a) {
+ fp2_sqr_basic(c,a);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 dig_t fp_addd_low(dig_t *c, const dig_t *a, const dig_t *b) {
         int i;
         dig_t carry, c0, c1, r0, r1;
@@ -2997,6 +3005,13 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp2_mul(fp2_t c, fp2_t a, fp2_t b) {
+ fp2_mul_basic(c,a,b);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp_exp(fp_t c, const fp_t a, const bn_t b) {
  fp_exp_basic(c,a,b);
 }
@@ -3015,6 +3030,13 @@ __noinline__
 void fp2_add_basic(fp2_t c, fp2_t a, fp2_t b) {
   fp_add_basic(c[0], a[0], b[0]);
   fp_add_basic(c[1], a[1], b[1]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_add(fp2_t c, fp2_t a,  fp2_t b) {
+ fp2_add_basic(c,a,b);
 }
 __device__
 #if INLINE == 0
@@ -4507,9 +4529,23 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp2_dbl(fp2_t c, fp2_t a) {
+ fp2_dbl_basic(c,a);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp2_sub_basic(fp2_t c, fp2_t a, fp2_t b) {
   fp_sub(c[0], a[0], b[0]);
   fp_sub(c[1], a[1], b[1]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_sub(fp2_t c, fp2_t a, fp2_t b) {
+ fp2_sub_basic(c,a,b);
 }
 
 __device__
@@ -4642,6 +4678,345 @@ static void ep2_add_basic_imp(ep2_t r, fp2_t s, ep2_t p, ep2_t q) {
 //                fp2_free(t1);
 //                fp2_free(t2);
  return;
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep2_dbl_projc_imp(ep2_t r, ep2_t p) {
+	fp2_t t0, t1, t2, t3, t4, t5;
+
+
+
+//		if (ep_curve_opt_a() == RLC_ZERO) {
+
+ t0[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t0[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+			fp2_sqr(t0, p->x);
+			fp2_add(t2, t0, t0);
+			fp2_add(t0, t2, t0);
+
+			fp2_sqr(t3, p->y);
+			fp2_mul(t1, t3, p->x);
+			fp2_add(t1, t1, t1);
+			fp2_add(t1, t1, t1);
+			fp2_sqr(r->x, t0);
+			fp2_add(t2, t1, t1);
+			fp2_sub(r->x, r->x, t2);
+			fp2_mul(r->z, p->z, p->y);
+			fp2_add(r->z, r->z, r->z);
+			fp2_add(t3, t3, t3);
+
+			fp2_sqr(t3, t3);
+			fp2_add(t3, t3, t3);
+			fp2_sub(t1, t1, r->x);
+			fp2_mul(r->y, t0, t1);
+			fp2_sub(r->y, r->y, t3);
+//		} else {
+//			/* dbl-2007-bl formulas: 1M + 8S + 1*a + 10add + 1*8 + 2*2 + 1*3 */
+//			/* http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl */
+//
+//			/* t0 = x1^2, t1 = y1^2, t2 = y1^4. */
+//			fp2_sqr(t0, p->x);
+//			fp2_sqr(t1, p->y);
+//			fp2_sqr(t2, t1);
+//
+//			if (p->coord != BASIC) {
+//				/* t3 = z1^2. */
+//				fp2_sqr(t3, p->z);
+//
+//				if (ep_curve_get_a() == RLC_ZERO) {
+//					/* z3 = 2 * y1 * z1. */
+//					fp2_mul(r->z, p->y, p->z);
+//					fp2_dbl(r->z, r->z);
+//				} else {
+//					/* z3 = (y1 + z1)^2 - y1^2 - z1^2. */
+//					fp2_add(r->z, p->y, p->z);
+//					fp2_sqr(r->z, r->z);
+//					fp2_sub(r->z, r->z, t1);
+//					fp2_sub(r->z, r->z, t3);
+//				}
+//			} else {
+//				/* z3 = 2 * y1. */
+//				fp2_dbl(r->z, p->y);
+//			}
+//
+//			/* t4 = S = 2*((x1 + y1^2)^2 - x1^2 - y1^4). */
+//			fp2_add(t4, p->x, t1);
+//			fp2_sqr(t4, t4);
+//			fp2_sub(t4, t4, t0);
+//			fp2_sub(t4, t4, t2);
+//			fp2_dbl(t4, t4);
+//
+//			/* t5 = M = 3 * x1^2 + a * z1^4. */
+//			fp2_dbl(t5, t0);
+//			fp2_add(t5, t5, t0);
+//			if (p->coord != BASIC) {
+//				fp2_sqr(t3, t3);
+//				fp2_mul(t1, t3, ep2_curve_get_a());
+//				fp2_add(t5, t5, t1);
+//			} else {
+//				fp2_add(t5, t5, ep2_curve_get_a());
+//			}
+//
+//			/* x3 = T = M^2 - 2 * S. */
+//			fp2_sqr(r->x, t5);
+//			fp2_dbl(t1, t4);
+//			fp2_sub(r->x, r->x, t1);
+//
+//			/* y3 = M * (S - T) - 8 * y1^4. */
+//			fp2_dbl(t2, t2);
+//			fp2_dbl(t2, t2);
+//			fp2_dbl(t2, t2);
+//			fp2_sub(t4, t4, r->x);
+//			fp2_mul(t5, t5, t4);
+//			fp2_sub(r->y, t5, t2);
+//		}
+
+		r->coord = PROJC;
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_dbl_projc(ep2_t r, ep2_t p) {
+	if (ep2_is_infty(p)) {
+		ep2_set_infty(r);
+		return;
+	}
+
+	ep2_dbl_projc_imp(r, p);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_dbl(ep2_t r, ep2_t p) {
+	ep2_dbl_projc(r, p);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep2_add_projc_mix(ep2_t r, ep2_t p, ep2_t q) {
+	fp2_t t0, t1, t2, t3, t4, t5, t6;
+
+ t0[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t0[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+ t6[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t6[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+		if (p->coord != BASIC) {
+			/* t0 = z1^2. */
+			fp2_sqr(t0, p->z);
+
+			/* t3 = U2 = x2 * z1^2. */
+			fp2_mul(t3, q->x, t0);
+
+			/* t1 = S2 = y2 * z1^3. */
+			fp2_mul(t1, t0, p->z);
+			fp2_mul(t1, t1, q->y);
+
+			/* t3 = H = U2 - x1. */
+			fp2_sub(t3, t3, p->x);
+
+			/* t1 = R = 2 * (S2 - y1). */
+			fp2_sub(t1, t1, p->y);
+		} else {
+			/* H = x2 - x1. */
+			fp2_sub(t3, q->x, p->x);
+
+			/* t1 = R = 2 * (y2 - y1). */
+			fp2_sub(t1, q->y, p->y);
+		}
+
+		/* t2 = HH = H^2. */
+		fp2_sqr(t2, t3);
+
+		/* If E is zero. */
+		if (fp2_is_zero(t3)) {
+			if (fp2_is_zero(t1)) {
+				/* If I is zero, p = q, should have doubled. */
+				ep2_dbl_projc(r, p);
+			} else {
+				/* If I is not zero, q = -p, r = infinity. */
+				ep2_set_infty(r);
+			}
+		} else {
+			/* t5 = J = H * HH. */
+			fp2_mul(t5, t3, t2);
+
+			/* t4 = V = x1 * HH. */
+			fp2_mul(t4, p->x, t2);
+
+			/* x3 = R^2 - J - 2 * V. */
+			fp2_sqr(r->x, t1);
+			fp2_sub(r->x, r->x, t5);
+			fp2_dbl(t6, t4);
+			fp2_sub(r->x, r->x, t6);
+
+			/* y3 = R * (V - x3) - Y1 * J. */
+			fp2_sub(t4, t4, r->x);
+			fp2_mul(t4, t4, t1);
+			fp2_mul(t1, p->y, t5);
+			fp2_sub(r->y, t4, t1);
+
+			if (p->coord != BASIC) {
+				/* z3 = z1 * H. */
+				fp2_mul(r->z, p->z, t3);
+			} else {
+				/* z3 = H. */
+				fp2_copy(r->z, t3);
+			}
+		}
+		r->coord = PROJC;
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep2_add_projc_imp(ep2_t r, ep2_t p, ep2_t q) {
+#if defined(EP_MIXED) && defined(STRIP)
+        ep2_add_projc_mix(r, p, q);
+#else /* General addition. */
+        fp2_t t0, t1, t2, t3, t4, t5, t6;
+
+ t0[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t0[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t2[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t3[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t4[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t5[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t6[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t6[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+                if (q->coord == BASIC) {
+                        ep2_add_projc_mix(r, p, q);
+                } else {
+                        /* t0 = z1^2. */
+                        fp2_sqr(t0, p->z);
+
+                        /* t1 = z2^2. */
+                        fp2_sqr(t1, q->z);
+
+                        /* t2 = U1 = x1 * z2^2. */
+                        fp2_mul(t2, p->x, t1);
+
+                        /* t3 = U2 = x2 * z1^2. */
+                        fp2_mul(t3, q->x, t0);
+
+                        /* t6 = z1^2 + z2^2. */
+                        fp2_add(t6, t0, t1);
+
+                        /* t0 = S2 = y2 * z1^3. */
+                        fp2_mul(t0, t0, p->z);
+                        fp2_mul(t0, t0, q->y);
+
+                        /* t1 = S1 = y1 * z2^3. */
+                        fp2_mul(t1, t1, q->z);
+                        fp2_mul(t1, t1, p->y);
+
+                        /* t3 = H = U2 - U1. */
+                        fp2_sub(t3, t3, t2);
+                        /* t0 = R = 2 * (S2 - S1). */
+                        fp2_sub(t0, t0, t1);
+
+                        fp2_dbl(t0, t0);
+
+                        /* If E is zero. */
+                        if (fp2_is_zero(t3)) {
+                                if (fp2_is_zero(t0)) {
+                                        /* If I is zero, p = q, should have doubled. */
+                                        ep2_dbl_projc(r, p);
+                                } else {
+                                        /* If I is not zero, q = -p, r = infinity. */
+                                        ep2_set_infty(r);
+                                }
+                        } else {
+                                /* t4 = I = (2*H)^2. */
+                                fp2_dbl(t4, t3);
+                                fp2_sqr(t4, t4);
+
+                                /* t5 = J = H * I. */
+                                fp2_mul(t5, t3, t4);
+
+                                /* t4 = V = U1 * I. */
+                                fp2_mul(t4, t2, t4);
+
+                                /* x3 = R^2 - J - 2 * V. */
+                                fp2_sqr(r->x, t0);
+                                fp2_sub(r->x, r->x, t5);
+                                fp2_dbl(t2, t4);
+                                fp2_sub(r->x, r->x, t2);
+
+                                /* y3 = R * (V - x3) - 2 * S1 * J. */
+                                fp2_sub(t4, t4, r->x);
+                                fp2_mul(t4, t4, t0);
+                                fp2_mul(t1, t1, t5);
+                                fp2_dbl(t1, t1);
+                                fp2_sub(r->y, t4, t1);
+
+                                /* z3 = ((z1 + z2)^2 - z1^2 - z2^2) * H. */
+                                fp2_add(r->z, p->z, q->z);
+                                fp2_sqr(r->z, r->z);
+                                fp2_sub(r->z, r->z, t6);
+                                fp2_mul(r->z, r->z, t3);
+                        }
+                }
+                r->coord = PROJC;
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_add_projc(ep2_t r, ep2_t p, ep2_t q) {
+        if (ep2_is_infty(p)) {
+                ep2_copy(r, q);
+                return;
+        }
+
+        if (ep2_is_infty(q)) {
+                ep2_copy(r, p);
+                return;
+        }
+
+        if (p == q) {
+                /* TODO: This is a quick hack. Should we fix this? */
+                ep2_dbl(r, p);
+                return;
+        }
+
+        ep2_add_projc_imp(r, p, q);
 }
 
 __device__
@@ -4827,7 +5202,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   bn_read_bin(e2, msg+192, 64);
   signmessage(e,e2, 1,q);
 
-  ep2_add_basic(p, p, q);
+  ep2_add_projc(p, p, q);
   printf("P+Q: \n");
   ep2_print(p);
   ep2_norm(p, p);
