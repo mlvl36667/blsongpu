@@ -3983,22 +3983,40 @@ void isogeny_map(ep2_t p){
  printf("Evaluating the polynomial...\n");
  /* numerators */                             
  fp2_eval(t0, p->x, coeffs->xn, coeffs->deg_xn);
+// printf("t0: \n");
+// fp2_print(t0);
  fp2_eval(t1, p->x, coeffs->yn, coeffs->deg_yn);
+// printf("t1: \n");
+// fp2_print(t1);
  /* denominators */                           
  fp2_eval(t2, p->x, coeffs->yd, coeffs->deg_yd);
+// printf("t2: \n");
+// fp2_print(t2);
  fp2_eval(t3, p->x, coeffs->xd, coeffs->deg_xd);
+// printf("t3: \n");
+// fp2_print(t3);
  /* normalize if necessary */  
 
 /* Y = Ny * Dx * Z^2. */                                                                                        
  fp2_mul_basic(p->y, p->y, t1);
+// printf("1. p->y: \n");
+// fp2_print(p->y);
  fp2_mul_basic(p->y, p->y, t3);
+// printf("2. p->y: \n");
+// fp2_print(p->y);
  /* Z = Dx * Dy, t1 = Z^2. */                                                                            \
  fp2_mul_basic(p->z, t2, t3);
+// printf("p->z: \n");
+// fp2_print(p->z);
  fp2_sqr_basic(t1, p->z);
  fp2_mul_basic(p->y, p->y, t1);
  /* X = Nx * Dy * Z. */                                                                                          \
  fp2_mul_basic(p->x, t0, t2);
+// printf("1. p->x: \n");
+// fp2_print(p->x);
  fp2_mul_basic(p->x, p->x, p->z);
+// printf("2. p->x: \n");
+// fp2_print(p->x);
  p->coord = PROJC;
 
 }
@@ -4166,8 +4184,8 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
   p->coord = BASIC;  
   printf("p->y: \n");
   fp2_print(p->y);
-  printf("p->z: \n");
-  fp2_print(p->z);
+//  printf("p->z: \n");
+//  fp2_print(p->z);
   free(t0[0]);
   free(t0[1]);
   free(t1[0]);
@@ -4247,6 +4265,16 @@ void ep2_curve_set_ctmap(const char *a0_str, const char *a1_str, const char *b0_
 //        printf("yd: %d\n", shared_coeffs->deg_yd);
 }
 
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_print(ep2_t p) {
+        fp2_print(p->x);
+        fp2_print(p->y);
+        fp2_print(p->z);
+}
 
 
 
@@ -4416,9 +4444,17 @@ void signmessage(bn_t e, bn_t e2, int sequence){
   printf("Finished mapping the scalar to the curve ...\n");
 
   neg = neg != fp2_sgn0(p->y, e);
+//  printf("1. PT->y: \n");
+//  fp2_print(p->y);
   fp2_neg(ttt, p->y);
+//  printf("2. PT->y: \n");
+//  fp2_print(p->y);
   dv_copy_cond(p->y[0], ttt[0], RLC_FP_DIGS, neg);
+//  printf("3. PT->y: \n");
+//  fp2_print(p->y);
   dv_copy_cond(p->y[1], ttt[1], RLC_FP_DIGS, neg);
+//  printf("4. PT->y: \n");
+//  fp2_print(p->y);
 
 // Now apply the isogeny map
 
@@ -4426,126 +4462,10 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 
   isogeny_map(p);
 
-  uint64_t px0;
-  uint64_t px1;
-  uint64_t px2;
-  uint64_t px3;
-  uint64_t px4;
-  uint64_t px5;
-
-  uint64_t py0;
-  uint64_t py1;
-  uint64_t py2;
-  uint64_t py3;
-  uint64_t py4;
-  uint64_t py5;
-
-  uint64_t pz0;
-  uint64_t pz1;
-  uint64_t pz2;
-  uint64_t pz3;
-  uint64_t pz4;
-  uint64_t pz5;
-
-  if( sequence == 2){
-////////////////////////////////////////
-  px0 = 12876831369499511095;
-  px1 = 669865624959273240;
-  px2 = 5295314185012811767;
-  px3 = 10535942465924952507;
-  px4 = 6749632078625001325;
-  px5 = 544070190095032775;
-
-  py0 = 13807866252442817510;
-  py1 = 1206778827755322241;
-  py2 = 6227792413039013907;
-  py3 = 12409653748090456027;
-  py4 = 15923766313813229816;
-  py5 = 1280940689572399341;
-
-  pz0 = 14186990084672407827;
-  pz1 = 17414337241577503165;
-  pz2 = 17737221398210816263;
-  pz3 = 5096200064592250870;
-  pz4 = 6989538818909868085;
-  pz5 = 1219742961965905715;
-  }
-
-  if( sequence == 1){
-//////////////////////////////////////////
-   px0 =  16603095906398444624;
-   px1 =  14847369377878545419;
-   px2 =  8937774108357643346;
-   px3 =  17574689352006813814;
-   px4 =  4620856641434282496;
-   px5 =  1793872408053411627;
-   
-   py0 =  17684262036518551128;
-   py1 =  18386928879118654222;
-   py2 =  13389195836363238096;
-   py3 =  6284561072484266232;
-   py4 =  5663343310858039123;
-   py5 =  1864692639812907776;
-   
-   pz0 =  10838604725761032207;
-   pz1 =  4762092640527260469;
-   pz2 =  14549356420920161935;
-   pz3 =  5090114536724173654;
-   pz4 =  8300404609496668738;
-   pz5 =  1618339427510023074;
-
-  }
-
-  if( sequence == 3){
-//////////////////////////////////////////
-  px0 = 4522175503006271926;
-  px1 = 7628860187923640081;
-  px2 = 15714645553301507193;
-  px3 = 3513625221767549538;
-  px4 = 9416525119631435704;
-  px5 = 942297724353119737;
-
-  py0 = 7064085492358342813;
-  py1 = 3011720167030279849;
-  py2 = 6475112925619391838;
-  py3 = 17963467974497784593;
-  py4 = 9265567426871135047;
-  py5 = 1266056669242111252;
-
-  pz0 = 7727439254583007199;
-  pz1 = 15108752542132982959;
-  pz2 = 12915093228206905201;
-  pz3 = 12683266112564391531;
-  pz4 = 16970245155421669696;
-  pz5 = 585935835826096346;
-  }
-
   printf("Isogeny map applied successfully... \n");
 ////////////////////////////////////////////////////////////////////
   printf("The resulting point (P) on BLS12-381: \n");
-//  printf("x coordinate: \n");
-//  printf("p->x[0] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0]), px0 );
-//  printf("p->x[1] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 1), px1);
-//  printf("p->x[2] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 2), px2);
-//  printf("p->x[3] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 3), px3);
-//  printf("p->x[4] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 4), px4);
-//  printf("p->x[5] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 5), px5);
-//  printf("y coordinate: \n");  
-//  printf("p->y[0] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] ), py0);
-//  printf("p->y[1] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 1), py1);
-//  printf("p->y[2] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 2), py2);
-//  printf("p->y[3] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 3), py3);
-//  printf("p->y[4] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 4), py4);
-//  printf("p->y[5] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 5), py5);
-//  printf("z coordinate: \n");  
-//  printf("p->z[0] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] ), pz0);
-//  printf("p->z[1] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 1), pz1);
-//  printf("p->z[2] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 2), pz2);
-//  printf("p->z[3] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 3), pz3);
-//  printf("p->z[4] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 4), pz4);
-//  printf("p->z[5] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 5), pz5);
-
-  /* compare sign of y to sign of t; fix if necessary */
+  ep2_print(p);
   printf("Deallocating memory ...\n");
 
   free(tt->dp);
