@@ -29,6 +29,7 @@
 #define fp_null(A)                      /* empty */
 #define fp_new(A)                       /* empty */
 #define bn_null(A)                      /* empty */
+#define BASIC    1
 #define FP_RDC   BASIC
 #define PROJC    2
 /** Use -1 as quadratic non-residue. */
@@ -1998,26 +1999,26 @@ __device__
 __noinline__
 #endif
 void fp_prime_conv_dig(fp_t c, dig_t a) {
- dv_t t;
- t = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
+// dv_t t;
+// t = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
 //        ctx_t *ctx = core_get();
 //        bn_null(t);
 //        dv_new(t);
-// #if FP_RDC == MONTY
-        if (a != 1) {
-         dv_zero(t, 2 * RLC_FP_DIGS + 1);
-         t[RLC_FP_DIGS] = fp_mul1_low(t, shared_conv, a);
-         fp_rdc_basic(c, t);
-        } else {
-         dv_copy(c, shared_one, RLC_FP_DIGS);
-        }
-// #else
+//// #if FP_RDC == MONTY
+//        if (a != 1) {
+//         dv_zero(t, 2 * RLC_FP_DIGS + 1);
+//         t[RLC_FP_DIGS] = fp_mul1_low(t, shared_conv, a);
+//         fp_rdc_basic(c, t);
+//        } else {
+//         dv_copy(c, shared_one, RLC_FP_DIGS);
+//        }
+//// #else
 //         (void)ctx;
-//         fp_zero(c);
-//         c[0] = a;
+         fp_zero(c);
+         c[0] = a;
 // #endif
- free(t);
+// free(t);
 }
 
 __device__
@@ -2239,11 +2240,11 @@ void fp_prime_back(bn_t c, const fp_t a) {
                         c->dp[i] = a[i];
                 }
 
-//#if FP_RDC == MONTY
+#if FP_RDC == MONTY
                 dv_zero(t, 2 * RLC_FP_DIGS + 1);
                 dv_copy(t, a, RLC_FP_DIGS);
                 fp_rdc_basic(c->dp, t);
-// #endif
+#endif
 
                 c->used = RLC_FP_DIGS;
                 c->sign = RLC_POS;
@@ -2939,63 +2940,63 @@ void fp2_mul_basic(fp2_t c, fp2_t a, fp2_t b) {
         t2 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
         t3 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
         t4 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
-        printf("now in fp2_mul_basic... \n");
-        fp2_print(c);
-        fp2_print(a);
-        fp2_print(b);
-//        printf ("a0 %" PRIu64 "\n", *a[0]);
-//        printf ("a1 %" PRIu64 "\n", *a[1]);
-//        printf ("b0 %" PRIu64 "\n", *b[0]);
-//        printf ("b1 %" PRIu64 "\n", *b[1]);
+//        printf("now in fp2_mul_basic... \n");
+//        fp2_print(c);
+//        fp2_print(a);
+//        fp2_print(b);
+////        printf ("a0 %" PRIu64 "\n", *a[0]);
+////        printf ("a1 %" PRIu64 "\n", *a[1]);
+////        printf ("b0 %" PRIu64 "\n", *b[0]);
+////        printf ("b1 %" PRIu64 "\n", *b[1]);
         /* Karatsuba algorithm. */
         /* t2 = a_0 + a_1, t1 = b_0 + b_1. */
 
 
         fp_add(t2, a[0], a[1]);
-        printf("t2:");
-        fp_print(t2);
+//        printf("t2:");
+//        fp_print(t2);
         fp_add(t1, b[0], b[1]);
-        printf("b0:");
-        fp_print(b[0]);
-        printf("b1:");
-        fp_print(b[1]);
-        printf("t1:");
-        fp_print(t1);
-//        printf ("t2 %" PRIu64 "\n", *t2);
-//        printf ("t1 %" PRIu64 "\n", *t1);
+//        printf("b0:");
+//        fp_print(b[0]);
+//        printf("b1:");
+//        fp_print(b[1]);
+//        printf("t1:");
+//        fp_print(t1);
+////        printf ("t2 %" PRIu64 "\n", *t2);
+////        printf ("t1 %" PRIu64 "\n", *t1);
 
         /* t3 = (a_0 + a_1) * (b_0 + b_1). */
         fp_muln_low(t3, t2, t1);
-        printf("t3:");
-        fp_print(t3);
+////        printf("t3:");
+//        fp_print(t3);
 
-//        printf ("t3 %" PRIu64 "\n", *t3);
+////        printf ("t3 %" PRIu64 "\n", *t3);
 
         /* t0 = a_0 * b_0, t4 = a_1 * b_1. */
         fp_muln_low(t0, a[0], b[0]);
-        printf("t0:");
-        fp_print(t0);
-//        printf ("t0 %" PRIu64 "\n", *t0);
+//        printf("t0:");
+//        fp_print(t0);
+////        printf ("t0 %" PRIu64 "\n", *t0);
 
         fp_muln_low(t4, a[1], b[1]);
-        printf("t4:");
-        fp_print(t4);
-//        printf ("t4 %" PRIu64 "\n", *t4);
+//        printf("t4:");
+//        fp_print(t4);
+////        printf ("t4 %" PRIu64 "\n", *t4);
 
 
         /* t2 = (a_0 * b_0) + (a_1 * b_1). */
         fp_addc_low(t2, t0, t4);
-        printf("t2:");
-        fp_print(t2);
+//        printf("t2:");
+//        fp_print(t2);
 
-//        printf ("t2 %" PRIu64 "\n", *t2);
+////        printf ("t2 %" PRIu64 "\n", *t2);
 
         /* t1 = (a_0 * b_0) + i^2 * (a_1 * b_1). */
         fp_subc_low(t1, t0, t4);
-        printf("t1:");
-        fp_print(t1);
+//        printf("t1:");
+//        fp_print(t1);
 
-//        printf ("t1 %" PRIu64 "\n", *t1);
+////        printf ("t1 %" PRIu64 "\n", *t1);
 
         /* t1 = u^2 * (a_1 * b_1). */
         for (int i = -1; i > fp_prime_get_qnr(); i--) {
@@ -3005,25 +3006,25 @@ void fp2_mul_basic(fp2_t c, fp2_t a, fp2_t b) {
          fp_addc_low(t1, t1, t4);
         }
         /* c_0 = t1 mod p. */
-        printf("t1:");
-        fp_print(t1);
+//        printf("t1:");
+//        fp_print(t1);
         fp_rdc(c[0], t1);
 
 // TODO debug fp_rdc valszeg ebben van a hiba!
 
         /* t4 = t3 - t2. */
 	fp_subc_low(t4, t3, t2);
-        printf("t4:");
-        fp_print(t4);
+//        printf("t4:");
+//        fp_print(t4);
 
-//        printf ("t4 %" PRIu64 "\n", *t4);
+////        printf ("t4 %" PRIu64 "\n", *t4);
 	/* c_1 = t4 mod p. */
 	fp_rdc(c[1], t4);
 
-       printf("result in fp2_mul_basic... \n");
+//       printf("result in fp2_mul_basic... \n");
 //       printf ("%" PRIu64 "\n", *c[0]);
 //       printf ("%" PRIu64 "\n", *c[1]);
-        fp2_print(c);
+//        fp2_print(c);
  free(t0);
  free(t1);
  free(t2);
@@ -3869,6 +3870,26 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void bn_print(const bn_t a) {
+        int i;
+
+        if (a->sign == RLC_NEG) {
+               printf("-");
+        }
+        if (a->used == 0) {
+                printf("0\n");
+        } else {
+                util_print_dig(a->dp[a->used - 1], 0);
+                for (i = a->used - 2; i >= 0; i--) {
+                        util_print_dig(a->dp[i], 1);
+                }
+                printf("\n");
+        }
+}
+__device__ 
+#if INLINE == 0
+__noinline__
+#endif
 void fp_read_str(fp_t a, const char *str, int len, int radix) {
  bn_t t;
 
@@ -3878,18 +3899,32 @@ void fp_read_str(fp_t a, const char *str, int len, int radix) {
  t->sign = RLC_POS;
 
  bn_read_str(t, str, len, radix);
+//                printf("Printing t in fp_read_str..\n");
+//                bn_print(t);
+
  if (bn_is_zero(t)) {
   fp_zero(a);
  } 
  else {
   if (t->used == 1) {
+//                printf("Printing a 1 in fp_read_str..\n");
+//                fp_print(a);
    fp_prime_conv_dig(a, t->dp[0]);
+//                printf("Printing a 2 in fp_read_str..\n");
+//                fp_print(a);
+
    if (bn_sign(t) == RLC_NEG) {
     fp_neg(a, a);
+//                printf("Printing a 3 in fp_read_str..\n");
+//                fp_print(a);
+
    }
   } 
   else {
    fp_prime_conv(a, t);
+//                printf("Printing a 4 in fp_read_str..\n");
+//                fp_print(a);
+
    }
  }
  free(t->dp);
@@ -4152,11 +4187,11 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 
  u       = shared_map_u;
 
- print_line();
- printf("u after fp_read_str ... \n");
- print_multiple_precision(shared_map_u[0],1);
- print_multiple_precision(shared_map_u[1],1);
- fp2_print(shared_map_u);
+// print_line();
+// printf("u after fp_read_str ... \n");
+// print_multiple_precision(shared_map_u[0],1);
+// print_multiple_precision(shared_map_u[1],1);
+// fp2_print(shared_map_u);
  printf("now precomputing the isomap constants...\n");
  /* SSWU map constants */
  /* constants 3 and 4 are a and b for the curve or isogeny */
@@ -4178,24 +4213,23 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 // Compute the SSWU Map
  printf("Computing the SSWU map ...\n");
 
- print_line();
- printf("operand... \n");
-// print_multiple_precision(t[0],1);
-
+ printf("t: \n");
  fp2_print(t);
  fp2_sqr_basic(t0, t);
- printf("results... \n");
+ printf("t^2: \n");
  fp2_print(t0);
 
- printf("u ... \n");
+ printf("u:  \n");
  fp2_print(u);
  fp2_mul_basic(t0, t0, u);  /* t0 = u * t^2 */
- printf("results after fp2_mul_basic... \n");
+ printf("u * t^2: \n");
  fp2_print(t0);
  fp2_sqr_basic(t1, t0);     /* t1 = u^2 * t^4 */
- printf("results 3... \n");
+ printf("u^2 * t^4: \n");
  fp2_print(t1);
  fp2_add_basic(t2, t1, t0); /* t2 = u^2 * t^4 + u * t^2 */ 
+ printf("u^2 * t^4 + u * t^2: \n");
+ fp2_print(t2);
  printf("Computing the SSWU map finished...\n");
 
  /* handle the exceptional cases */  
