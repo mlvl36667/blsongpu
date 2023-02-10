@@ -2558,20 +2558,6 @@ __noinline__
 void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         int i, l;
 
-//  printf("fp_exp_basic a: \n");
-//  print_multiple_precision(a,6);
-//  print_line();
-//
-//  printf("fp_exp_basic b: \n");
-//  print_multiple_precision(b->dp,6);
-//  print_line();
-
-//  printf("inside fp_exp_basic...\n");
-//  printf("a: \n ");
-//  printf("%" PRIu64 "\n", *a);
-//  printf("b: \n ");
-//  printf("%" PRIu64 "\n", b->dp[0]);
-// printf("1. fp_exp_basic // ");
         fp_t r;
         r = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
         if(r == NULL){
@@ -2587,30 +2573,14 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         if(r == NULL){
          printf("r has problems...\n");
         }
-//  printf("l: %d \n ", l);
-
-//  printf("first r: \n ");
-//  printf("%" PRIu64 "\n", *r);
 
         for (i = l - 2; i >= 0; i--) {
-// printf("9. fp_exp_basic // ");
-//         printf("1. %d. r %" PRIu64 "\n",i, *r);
-
-
          fp_sqr_basic(r, r);
-//         printf("2. %d. r %" PRIu64 "\n",i, *r);
-//  printf("%d r: \n ", i);
-//  printf("%" PRIu64 "\n", *r);
-
         if(r == NULL){
          printf("r has problems...\n");
         }
-// printf("10. fp_exp_basic // ");
-// printf("%" PRIu64 "\n", *r);
          if (bn_get_bit(b, i)) {
           fp_mul_basic(r, r, a);
-//  printf("fp_mul_basic r: \n ", i);
-//  printf("%" PRIu64 "\n", *r);
          }
         }
         if(r == NULL){
@@ -2619,7 +2589,6 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         if (bn_sign(b) == RLC_NEG) {
          fp_inv_exgcd(c, r);
         } else {
-// printf("15. fp_exp_basic // ");
         if(r == NULL){
          printf("r has problems...\n");
         }
@@ -2627,13 +2596,6 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         }
 
         free(r);
-//  printf("fp_exp_basic c: \n");
-//  print_multiple_precision(c,6);
-//  print_line();
-// printf("16. fp_exp_basic // ");
-//  printf("c: \n ");
-//  printf("%" PRIu64 "\n", *c);
-// printf("leaving fp_exp_basic...\n");
 }
 __device__
 #if INLINE == 0
@@ -3437,7 +3399,11 @@ int fp_srt(fp_t c, const fp_t a) {
 
 			fp_exp(t0, a, e);
 			fp_sqr(t1, t0);
+//                        printf("t1 es a ezek egyenloek...\n");
+//                        fp_print(t1);
+//                        fp_print(a);
 			r = (fp_cmp(t1, a) == RLC_EQ);
+//                        printf("r: %d\n",r);
 			fp_copy(c, t0);
 //		} else {
 //			int f = 0, m = 0;
@@ -3567,7 +3533,6 @@ int fp2_srt(fp2_t c, fp2_t a) {
  t1 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
  t2 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
 
-// printf("1. fp2_srt \n");
  if (fp2_is_zero(a)) {
   fp2_zero(c);
   free(t0);
@@ -3583,7 +3548,6 @@ int fp2_srt(fp2_t c, fp2_t a) {
   if (fp_srt(t0, a[0])) {
    fp_copy(c[0], t0);
    fp_zero(c[1]);
-//   printf("2. fp2_srt \n");
   } 
   else {
   /* Compute a[0]/i^2. */
@@ -3594,17 +3558,13 @@ int fp2_srt(fp2_t c, fp2_t a) {
     fp_hlv(t0, a[0]);
    } 
    else {
-//    printf("3. fp2_srt \n");
     fp_set_dig(t0, -fp_prime_get_qnr());
     fp_inv(t0, t0);
-//    printf("4. fp2_srt \n");
     fp_mul(t0, t0, a[0]);
    }
 #endif
   fp_neg(t0, t0);
-//    printf("5. fp2_srt \n");
   fp_zero(c[0]);
-//    printf("6. fp2_srt \n");
   if (!fp_srt(c[1], t0)) {
    /* should never happen! */
    printf("Problem in squaring field elements...\n");
@@ -3613,28 +3573,38 @@ int fp2_srt(fp2_t c, fp2_t a) {
  } 
  else {
   /* t0 = a[0]^2 - i^2 * a[1]^2 */
+//   printf("a0 a1:\n");
+//   fp_print(a[0]);
+//   fp_print(a[1]);
   fp_sqr(t0, a[0]);
   fp_sqr(t1, a[1]);
+//   printf("a0 a1^2:\n");
+//   fp_print(t0);
+//   fp_print(t1);
  
   for (int i = -1; i > fp_prime_get_qnr(); i--) {
    fp_add(t0, t0, t1);
   }
  
+//   printf("a[0]^2 - i^2 * a[1]^2:\n");
+//   fp_print(t0);
+//
   fp_add(t0, t0, t1);
  
+//   fp_print(t0);
   if (fp_srt(t1, t0)) {
    /* t0 = (a_0 + sqrt(t0)) / 2 */
    fp_add(t0, a[0], t1);
    fp_hlv(t0, t0);
    if (!fp_srt(t2, t0)) {
     /* t0 = (a_0 - sqrt(t0)) / 2 */
-    fp_sub(t0, a[0], t1);
-    fp_hlv(t0, t0);
-    if (!fp_srt(t2, t0)) {
-     /* should never happen! */
-     printf("Problem in squaring field elements...\n");
-    }
-    
+     fp_sub(t0, a[0], t1);
+     fp_hlv(t0, t0);
+     if (!fp_srt(t2, t0)) {
+      /* should never happen! */
+      printf("Problem in squaring field elements...\n");
+     }
+    } 
     /* c_0 = sqrt(t0) */
     fp_copy(c[0], t2);
     /* c_1 = a_1 / (2 * sqrt(t0)) */
@@ -3642,13 +3612,13 @@ int fp2_srt(fp2_t c, fp2_t a) {
     fp_inv(t2, t2);
     fp_mul(c[1], a[1], t2);
     r = 1;
-   }
   }
+ }
   free(t0);
   free(t1);
   free(t2);
+//  printf("r: %d\n",r);
   return r;
- }
 }
 __device__
 #if INLINE == 0
@@ -4101,23 +4071,23 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 // Compute the SSWU Map
  printf("Computing the SSWU map ...\n");
 
- printf("t: \n");
- fp2_print(t);
+// printf("t: \n");
+// fp2_print(t);
  fp2_sqr_basic(t0, t);
- printf("t^2: \n");
- fp2_print(t0);
+// printf("t^2: \n");
+// fp2_print(t0);
 
- printf("u:  \n");
- fp2_print(u);
+// printf("u:  \n");
+// fp2_print(u);
  fp2_mul_basic(t0, t0, u);  /* t0 = u * t^2 */
- printf("u * t^2: \n");
- fp2_print(t0);
+// printf("u * t^2: \n");
+// fp2_print(t0);
  fp2_sqr_basic(t1, t0);     /* t1 = u^2 * t^4 */
- printf("u^2 * t^4: \n");
- fp2_print(t1);
+// printf("u^2 * t^4: \n");
+// fp2_print(t1);
  fp2_add_basic(t2, t1, t0); /* t2 = u^2 * t^4 + u * t^2 */ 
- printf("u^2 * t^4 + u * t^2: \n");
- fp2_print(t2);
+// printf("u^2 * t^4 + u * t^2: \n");
+// fp2_print(t2);
  printf("Computing the SSWU map finished...\n");
 
  /* handle the exceptional cases */  
@@ -4134,8 +4104,8 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
                                                                               
  /* compute x1, g(x1) */                                                    
  printf("compute x1, g(x1)... \n");
- printf("mBoverA: \n");
- fp2_print(mBoverA);
+// printf("mBoverA: \n");
+// fp2_print(mBoverA);
  fp2_mul_basic(p->x, t2, mBoverA); /* -B / A * (1 + 1 / (u^2 * t^4 + u * t^2)) */
  printf("p->x: \n");
  fp2_print(p->x);
@@ -4143,8 +4113,8 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
  fp2_add_basic(p->y, p->y, a);     /* x^2 + a */                               
  fp2_mul_basic(p->y, p->y, p->x);  /* x^3 + a x */                            
  fp2_add_basic(p->y, p->y, b);     /* x^3 + a x + b */                       
- printf("x^3 + a x + b: \n");
- fp2_print(p->y);
+// printf("x^3 + a x + b: \n");
+// fp2_print(p->y);
  printf("compute x1, g(x1) finished... \n");
  /* compute x2, g(x2) */                                            
  printf("compute x2, g(x2) ... \n");
@@ -4157,18 +4127,47 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 //  /* Avoiding a second sqrt relies on knowing the 2-adicity of the modulus. */ 
   if (!fp2_srt(p->y, p->y)) {                                                 
           /* try x2, g(x2) */                                                
-          printf("(p->y)^(1/2): \n");               
-                        fp2_print(p->y); 
-
+          printf("--- second sqrt--- \n");
+//          printf("(p->y)^(1/2): \n");               
+//          fp2_print(p->y); 
+          fp2_mul_basic(t2, t0, p->x); /* t2 = u * t^2 * x1 */
+//          printf("t2: \n");               
+//          fp2_print(t2); 
           fp2_copy(p->x, t2);                                               
-          if (!fp2_srt(p->y, t3)) {                                        
-                  printf("+++++++++ Error +++++++++ \n");
-                  printf("!fp2_srt(p->y, t3) in MAP calculation...\n");
-                  printf("++++++++ !Error! ++++++++++ \n");
-          }                                                              
+          fp2_sqr_basic(t1, t); /* */ 
+//          printf("t^2: \n");               
+//          fp2_print(t1); 
+          fp2_mul_basic(t1, t, t1); /* t1 = t^3 */    
+//          printf("t^3: \n");               
+//          fp2_print(t1); 
+          fp2_sqr_basic(t0, u);  /* t0  */           
+          fp2_mul_basic(t0, t0, u);  /* t0 = u^3 */   
+//          printf("u^3: \n");               
+//          fp2_print(t0); 
+          fp2_srt(t0, t0);     /* t3 = sqrt(u^3) */           
+//          printf("u^(3/2): \n");               
+//          fp2_print(t0); 
+          fp2_mul_basic(p->y, p->y, t0);  /* t0 = u * t^2 */         
+//          printf("1. p->y: \n");
+//          fp2_print(p->y);
+          fp2_srt(p->y, p->y);     /* t3 = -u */          
+//          printf("2. p->y: \n");
+//          fp2_print(p->y);
+          fp2_mul_basic(p->y, p->y, t1); /* t5 = g(t2) = u^3 * t^6 * g(p->x) */     
+//          printf("3. p->y: \n");
+//          fp2_print(p->y);
+//          if (!fp2_srt(p->y, t3)) {                                        
+//                  printf("+++++++++ Error +++++++++ \n");
+//                  printf("!fp2_srt(p->y, t3) in MAP calculation...\n");
+//                  printf("++++++++ !Error! ++++++++++ \n");
+//          }                                                              
   }    
   fp2_set_dig(p->z, 1);
   p->coord = BASIC;  
+  printf("p->y: \n");
+  fp2_print(p->y);
+  printf("p->z: \n");
+  fp2_print(p->z);
   free(t0[0]);
   free(t0[1]);
   free(t1[0]);
@@ -4264,7 +4263,7 @@ void signmessage(bn_t e, bn_t e2, int sequence){
  bn_st conv;
  bn_st one;
  ep2_t p;
- printf("sequence:  %d \n", sequence);
+// printf("sequence:  %d \n", sequence);
 // print_line();
 // printf("shared_prime: \n");
 // print_multiple_precision(shared_prime,6);
@@ -4384,18 +4383,6 @@ void signmessage(bn_t e, bn_t e2, int sequence){
 // the message is reduced and loaded into ttt
 
 
-//  printf("shared_conv: \n");
-//  print_multiple_precision(shared_conv,6);
-//  print_line();
-//
-//  printf("shared_one: \n");
-//  print_multiple_precision(shared_one,6);
-//  print_line();
-//
-//  printf("shared_u: \n");
-//  print_multiple_precision(shared_u,6);
-//  print_line();
-
   fp_prime_conv(ttt[0], e);
   fp_prime_conv(ttt[1], e2);
 
@@ -4434,30 +4421,6 @@ void signmessage(bn_t e, bn_t e2, int sequence){
   dv_copy_cond(p->y[1], ttt[1], RLC_FP_DIGS, neg);
 
 // Now apply the isogeny map
-//  print_line();
-//  printf("The point before applying the isogeny map... \n");
-//
-//  printf("x coordinate: \n");
-//  printf("p->x[0] %" PRIu64 "\n", *(p->x[0] ));
-//  printf("p->x[1] %" PRIu64 "\n", *(p->x[0] + 1));
-//  printf("p->x[2] %" PRIu64 "\n", *(p->x[0] + 2));
-//  printf("p->x[3] %" PRIu64 "\n", *(p->x[0] + 3));
-//  printf("p->x[4] %" PRIu64 "\n", *(p->x[0] + 4));
-//  printf("p->x[5] %" PRIu64 "\n", *(p->x[0] + 5));
-//  printf("y coordinate: \n");
-//  printf("p->y[0] %" PRIu64 "\n", *(p->y[0] ));
-//  printf("p->y[1] %" PRIu64 "\n", *(p->y[0] + 1));
-//  printf("p->y[2] %" PRIu64 "\n", *(p->y[0] + 2));
-//  printf("p->y[3] %" PRIu64 "\n", *(p->y[0] + 3));
-//  printf("p->y[4] %" PRIu64 "\n", *(p->y[0] + 4));
-//  printf("p->y[5] %" PRIu64 "\n", *(p->y[0] + 5));
-//  printf("z coordinate: \n");
-//  printf("p->z[0] %" PRIu64 "\n", *(p->z[0] ));
-//  printf("p->z[1] %" PRIu64 "\n", *(p->z[0] + 1));
-//  printf("p->z[2] %" PRIu64 "\n", *(p->z[0] + 2));
-//  printf("p->z[3] %" PRIu64 "\n", *(p->z[0] + 3));
-//  printf("p->z[4] %" PRIu64 "\n", *(p->z[0] + 4));
-//  printf("p->z[5] %" PRIu64 "\n", *(p->z[0] + 5));
 
   printf("Now applying the isogeny map... \n");
 
@@ -4560,27 +4523,27 @@ void signmessage(bn_t e, bn_t e2, int sequence){
   printf("Isogeny map applied successfully... \n");
 ////////////////////////////////////////////////////////////////////
   printf("The resulting point (P) on BLS12-381: \n");
-  printf("x coordinate: \n");
-  printf("p->x[0] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0]), px0 );
-  printf("p->x[1] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 1), px1);
-  printf("p->x[2] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 2), px2);
-  printf("p->x[3] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 3), px3);
-  printf("p->x[4] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 4), px4);
-  printf("p->x[5] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 5), px5);
-  printf("y coordinate: \n");  
-  printf("p->y[0] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] ), py0);
-  printf("p->y[1] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 1), py1);
-  printf("p->y[2] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 2), py2);
-  printf("p->y[3] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 3), py3);
-  printf("p->y[4] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 4), py4);
-  printf("p->y[5] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 5), py5);
-  printf("z coordinate: \n");  
-  printf("p->z[0] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] ), pz0);
-  printf("p->z[1] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 1), pz1);
-  printf("p->z[2] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 2), pz2);
-  printf("p->z[3] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 3), pz3);
-  printf("p->z[4] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 4), pz4);
-  printf("p->z[5] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 5), pz5);
+//  printf("x coordinate: \n");
+//  printf("p->x[0] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0]), px0 );
+//  printf("p->x[1] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 1), px1);
+//  printf("p->x[2] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 2), px2);
+//  printf("p->x[3] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 3), px3);
+//  printf("p->x[4] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 4), px4);
+//  printf("p->x[5] %" PRIu64 "  %" PRIu64 "\n", *(p->x[0] + 5), px5);
+//  printf("y coordinate: \n");  
+//  printf("p->y[0] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] ), py0);
+//  printf("p->y[1] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 1), py1);
+//  printf("p->y[2] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 2), py2);
+//  printf("p->y[3] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 3), py3);
+//  printf("p->y[4] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 4), py4);
+//  printf("p->y[5] %" PRIu64 "  %" PRIu64 "\n", *(p->y[0] + 5), py5);
+//  printf("z coordinate: \n");  
+//  printf("p->z[0] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] ), pz0);
+//  printf("p->z[1] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 1), pz1);
+//  printf("p->z[2] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 2), pz2);
+//  printf("p->z[3] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 3), pz3);
+//  printf("p->z[4] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 4), pz4);
+//  printf("p->z[5] %" PRIu64 "  %" PRIu64 "\n", *(p->z[0] + 5), pz5);
 
   /* compare sign of y to sign of t; fix if necessary */
   printf("Deallocating memory ...\n");
@@ -4749,7 +4712,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
  uint8_t *msg;
 
- char message_string_1[513] = "b629a33baa2f71304e6a1f84eed5ab383a23bb055b1442795bcd7ac4fba664c5e178dba9737570dd6ded5f73fd3fbbac25f559e84f2154d8ab0d32442da10a60fc830f54bbfc0b19ba723b0bc4177b96c5fc6aa77cee05ef80163fca2b5b92145c7004beef09abab3d52c6989da26ee0e8c4d63587b8e6127279d5abf4b520becfcd98c2163f82d7f1777d5559fc77ad040bbb8b933780211a5ef359f70788f95773612f69638cae550aed382d68a4be0c194139e7b3069126b2dad1d6e5d8fe5cfc8d5a90c783f1ebab25d095776172a66d9afdb16d7c289ad89c93dda54c7b0cf86991a200ff0e858573796cf396e6ae77470b4dd2d61267f5716de16b199f";
+ char message_string_1[513] = "c70dbacf6414ea05360d6473c0a1e642b9eceeb49a5bab0d59c44864581dac4643303634876cc3f878fbb5fc334dc072a7fce16c5bdd91b70ff3aca4c178ecd57804bb38093ca6df3a34ee1b8001acab17fcb9df58e4630c9201687491cfd39f2e9600ba610a72d7b6cf731bbce9f4320a3ef506a5a574474331bab6fc45b3798aea69f8be5513ae3e69b073ecf82b2a5e63decb15ff32c2146374868189359bfc6ae1cfa585b7810304ac30aa28f2654e05a422148f1f5884657b9d02dc0ce1787e53abe2d0ea79f140bc95cb2564e27fd60399e3cbdac7fb7e3e1bd166033ac375ea14c80cdadddefbeebf263f42b154ba0228a9163f5be49242a96b30ce66";
 // 15CC3F292D66704A 62687D6E2DCB5913 7C9E20D357539F96 9F51EABD020D64E0 81792D01F15CC248 1D44777B8BAFC9FD ttt[0]
 // 147765C676F3B800 6798BA4300F29F76 27CBE052A3D0397E CE0A4A7079E5EFEF 45DECCC08A4147E2 345BA7EC94B37852 ttt[1]
 
