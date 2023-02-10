@@ -5018,7 +5018,423 @@ void ep2_add_projc(ep2_t r, ep2_t p, ep2_t q) {
 
         ep2_add_projc_imp(r, p, q);
 }
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_add(ep2_t r, ep2_t p, ep2_t q) {
+        ep2_add_projc(r, p, q);
+}
 
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_neg(ep2_t r, ep2_t p) {
+	if (ep2_is_infty(p)) {
+		ep2_set_infty(r);
+		return;
+	}
+
+	if (r != p) {
+		fp2_copy(r->x, p->x);
+		fp2_copy(r->z, p->z);
+	}
+
+	fp2_neg(r->y, p->y);
+
+	r->coord = p->coord;
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_mul_basic(ep2_t r, ep2_t p, const bn_t k) {
+	int i, l;
+	ep2_t t;
+
+  t = (ep2_t)malloc(sizeof(ep2_st));
+  t->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+	if (bn_is_zero(k) || ep2_is_infty(p)) {
+		ep2_set_infty(r);
+		return;
+	}
+
+		l = bn_bits(k);
+
+		if (bn_get_bit(k, l - 1)) {
+			ep2_copy(t, p);
+		} else {
+			ep2_set_infty(t);
+		}
+
+		for (i = l - 2; i >= 0; i--) {
+			ep2_dbl(t, t);
+			if (bn_get_bit(k, i)) {
+				ep2_add(t, t, p);
+			}
+		}
+
+		ep2_copy(r, t);
+		ep2_norm(r, r);
+		if (bn_sign(k) == RLC_NEG) {
+			ep2_neg(r, r);
+		}
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_sub(ep2_t r, ep2_t p, ep2_t q) {
+	ep2_t t;
+
+  t = (ep2_t)malloc(sizeof(ep2_st));
+  t->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+	if (p == q) {
+		ep2_set_infty(r);
+		return;
+	}
+
+
+		ep2_neg(t, q);
+		ep2_add(r, p, t);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_frb(fp2_t c, fp2_t a, int i) {
+        switch (i % 2) {
+                case 0:
+                        fp2_copy(c, a);
+                        break;
+                case 1:
+                        /* (a_0 + a_1 * u)^p = a_0 - a_1 * u. */
+                        fp_copy(c[0], a[0]);
+                        fp_neg(c[1], a[1]);
+                        break;
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_exp(fp2_t c, fp2_t a, bn_t b) {
+        fp2_t t;
+
+        if (bn_is_zero(b)) {
+                fp2_set_dig(c, 1);
+                return;
+        }
+
+ t[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+
+                fp2_copy(t, a);
+                for (int i = bn_bits(b) - 2; i >= 0; i--) {
+                        fp2_sqr(t, t);
+                        if (bn_get_bit(b, i)) {
+                                fp2_mul(t, t, a);
+                        }
+                }
+
+                if (bn_sign(b) == RLC_NEG) {
+                        fp2_inv(c, t);
+                } else {
+                        fp2_copy(c, t);
+                }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void bn_div1_low(dig_t *c, dig_t *d, const dig_t *a, int size, dig_t b) {
+        dig_t q, r, w = 0;
+
+        for (int i = size - 1; i >= 0; i--) {
+                RLC_DIV_DIG(q, r, w, a[i], b);
+                c[i] = q;
+                w = r;
+        }
+        *d = (dig_t)w;
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void bn_div_dig(bn_t c, const bn_t a, dig_t b) {
+        bn_t q;
+        dig_t r;
+
+ q = (bn_t) malloc(sizeof(bn_st));
+ q->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+ q->alloc = RLC_BN_SIZE;
+ q->sign = RLC_POS;
+ q->used = RLC_FP_DIGS;
+
+        if (b == 0) {
+                printf("bn_div_dig error..\n");
+                return;
+        }
+
+        if (b == 1 || bn_is_zero(a) == 1) {
+                if (c != NULL) {
+                        bn_copy(c, a);
+                }
+                return;
+        }
+
+                bn_new_size(q, a->used);
+                bn_div1_low(q->dp, &r, (const dig_t *)a->dp, a->used, b);
+
+                if (c != NULL) {
+                        q->used = a->used;
+                        q->sign = a->sign;
+                        bn_trim(q);
+                        bn_copy(c, q);
+                }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_mul_nor_basic(fp2_t c, fp2_t a) {
+	fp2_t t;
+	bn_t b;
+
+ t[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+ b = (bn_t) malloc(sizeof(bn_st));
+ b->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+ b->alloc = RLC_BN_SIZE;
+ b->sign = RLC_POS;
+ b->used = RLC_FP_DIGS;
+
+		/* If p = 3 mod 8, (1 + i) is a QNR/CNR. */
+		fp_neg(t[0], a[1]);
+		fp_add(c[1], a[0], a[1]);
+		fp_add(c[0], t[0], a[0]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_frb(ep2_t r, ep2_t p, int i) {
+ fp2_t ep2_frb0;
+ fp2_t ep2_frb1;
+ fp2_t t1,t0;
+ bn_t e;
+
+ ep2_frb0[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ ep2_frb0[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+ ep2_frb1[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ ep2_frb1[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t1[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+ t0[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ t0[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+
+ fp2_set_dig(t1, 1);
+ fp2_mul_nor_basic(t0, t1);
+
+ e = (bn_t) malloc(sizeof(bn_st));
+ e->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+ e->alloc = RLC_BN_SIZE;
+ e->sign = RLC_POS;
+ e->used = RLC_FP_DIGS;
+
+ dv_copy(e->dp, shared_prime, RLC_FP_DIGS);
+ bn_sub_dig(e, e, 1);
+ bn_div_dig(e, e, 6);
+ fp2_exp(t0, t0, e);
+
+
+ fp2_sqr(t1, t0);
+
+ fp_copy(ep2_frb0[0], t1[0]);
+ fp_copy(ep2_frb0[1], t1[1]);
+ fp2_inv(ep2_frb0,ep2_frb0);
+ fp2_mul(t1, t1, t0);
+ fp_copy(ep2_frb1[0], t1[0]);
+ fp_copy(ep2_frb1[1], t1[1]);
+ fp2_inv(ep2_frb1,ep2_frb1);
+
+
+// ep2_frb: 
+// 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+// 1A0111EA397FE699 EC02408663D4DE85 AA0D857D89759AD4 897D29650FB85F9B 409427EB4F49FFFD 8BFD00000000AAAD
+// 135203E60180A68E E2E9C448D77A2CD9 1C3DEDD930B1CF60 EF396489F61EB45E 304466CF3E67FA0A F1EE7B04121BDEA2
+// 06AF0E0437FF400B 6831E36D6BD17FFE 48395DABC2D3435E 77F76E17009241C5 EE67992F72EC05F4 C81084FBEDE3CC09
+
+
+	ep2_copy(r, p);
+	for (; i > 0; i--) {
+		fp2_frb(r->x, r->x, 1);
+		fp2_frb(r->y, r->y, 1);
+		fp2_frb(r->z, r->z, 1);
+		fp2_mul(r->x, r->x, ep2_frb0);
+		fp2_mul(r->y, r->y, ep2_frb1);
+	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void bn_set_2b(bn_t a, int b) { 
+        int i, d;
+
+        if (b < 0) {
+                bn_zero(a);
+        } else {
+                RLC_RIP(b, d, b);
+
+                bn_grow(a, d + 1);
+                for (i = 0; i < d; i++) {
+                        a->dp[i] = 0;
+                }
+                a->used = d + 1;
+                a->dp[d] = ((dig_t)1 << b);
+                a->sign = RLC_POS;
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void bn_set_bit(bn_t a, int bit, int value) {
+        int d;
+
+        if (bit < 0) {
+                printf("error in bn_set_bit\n");
+                return;
+        }
+
+        RLC_RIP(bit, d, bit);
+
+        bn_grow(a, d);
+
+        if (value == 1) {
+                a->dp[d] |= ((dig_t)1 << bit);
+                if ((d + 1) > a->used) {
+                        a->used = d + 1;
+                }
+        } else {
+                a->dp[d] &= ~((dig_t)1 << bit);
+                bn_trim(a);
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep2_mul_cof_b12(ep2_t r, ep2_t p) {
+	bn_t x;
+	ep2_t t0, t1, t2, t3;
+
+
+  t0 = (ep2_t)malloc(sizeof(ep2_st));
+  t0->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t0->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t0->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t0->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t0->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t0->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t1 = (ep2_t)malloc(sizeof(ep2_st));
+  t1->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t1->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t1->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t1->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t1->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t1->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t2 = (ep2_t)malloc(sizeof(ep2_st));
+  t2->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t2->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t2->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t2->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t2->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t2->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t3 = (ep2_t)malloc(sizeof(ep2_st));
+  t3->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t3->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t3->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t3->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  t3->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  t3->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  x = (bn_t ) malloc(sizeof(bn_st));
+  x->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+  x->alloc = RLC_BN_SIZE;
+  x->sign = RLC_POS;
+
+                /* x = -(2^63 + 2^62 + 2^60 + 2^57 + 2^48 + 2^16). */
+                bn_set_2b(x, 63);
+                bn_set_bit(x, 62, 1);
+                bn_set_bit(x, 60, 1);
+                bn_set_bit(x, 57, 1);
+                bn_set_bit(x, 48, 1);
+                bn_set_bit(x, 16, 1);
+                bn_neg(x, x);
+
+
+//		fp_prime_get_par(x);
+
+		/* Compute t0 = xP. */
+		ep2_mul_basic(t0, p, x);
+		/* Compute t1 = [x^2]P. */
+		ep2_mul_basic(t1, t0, x);
+
+		/* t2 = (x^2 - x - 1)P = x^2P - x*P - P. */
+		ep2_sub(t2, t1, t0);
+		ep2_sub(t2, t2, p);
+		/* t3 = \psi(x - 1)P. */
+		ep2_sub(t3, t0, p);
+		ep2_frb(t3, t3, 1);
+		ep2_add(t2, t2, t3);
+		/* t3 = \psi^2(2P). */
+		ep2_dbl(t3, p);
+		ep2_frb(t3, t3, 2);
+		ep2_add(t2, t2, t3);
+		ep2_norm(r, t2);
+}
 __device__
 #if INLINE == 0
 __noinline__
@@ -5140,6 +5556,14 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
  char message_string_1[513] = "c70dbacf6414ea05360d6473c0a1e642b9eceeb49a5bab0d59c44864581dac4643303634876cc3f878fbb5fc334dc072a7fce16c5bdd91b70ff3aca4c178ecd57804bb38093ca6df3a34ee1b8001acab17fcb9df58e4630c9201687491cfd39f2e9600ba610a72d7b6cf731bbce9f4320a3ef506a5a574474331bab6fc45b3798aea69f8be5513ae3e69b073ecf82b2a5e63decb15ff32c2146374868189359bfc6ae1cfa585b7810304ac30aa28f2654e05a422148f1f5884657b9d02dc0ce1787e53abe2d0ea79f140bc95cb2564e27fd60399e3cbdac7fb7e3e1bd166033ac375ea14c80cdadddefbeebf263f42b154ba0228a9163f5be49242a96b30ce66";
 // 15CC3F292D66704A 62687D6E2DCB5913 7C9E20D357539F96 9F51EABD020D64E0 81792D01F15CC248 1D44777B8BAFC9FD ttt[0]
 // 147765C676F3B800 6798BA4300F29F76 27CBE052A3D0397E CE0A4A7079E5EFEF 45DECCC08A4147E2 345BA7EC94B37852 ttt[1]
+// P+Q after Forbenius: 
+// 19C38BACB92FE1AB DB60CB93953905D4 6074A7272E38D5B1 1BE58CE84F66949E 7C892A9D9BA26B3B 6E5762510852B323
+// 0FF88E19FF154346 5E0BAFA097B616B8 0A81717E5A597AF5 71F023E723E3CB89 A9C63F913BEB0FD1 E33027CA5649D4F3
+// 055ABA66857688CB F9027B0E501079C8 6F7A0A85671FA86F D053D9F741A56F0D F50B5BDF4AE80DA5 9B9E873BE7CFE6A0
+// 1979ECA2D88265FB 96CF461427634369 7074995C4D3FA986 CEA781C98A77AAB4 F9F914F079C5C5D4 FCAC03952C4937EF
+// 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000001
+// 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+
 
  char message_string_2[513] = "975a7a3edf0c907a8670af92ed36b3a1e94940ed8d4fe0e54592e0a4d6527b5bd6fd4cb9968d760b68be1dc82f576a6a73cc0714e02e353ad6d510f5dfc7f02479abf7ee20e927345cc36b408d3fcd05729fdf18f74f4ad91cc4bd50d3795fe5cfbbfb060689552b39e996fcece89e258b7db611a41c271216af110d493e81e96f9b1aa1696ef41c6573563e84c547de86f18d3ea897956dda7ca5101a47138c906602acf2ebd4cc1c8411b1e4f83825eaacbe54c9ed8a5ae2df3dd04bc77f223e03d78e10ca95d59de0bc047dd33e5a170473d8f70d94bf467ed9684a1ed05cff88779990ba1aa0832005af2a19be3cdd46e68094ed0ba34789c80f24d5f07f";
  char message_string_3[513] = "3d762157e3c4566456bb1a25654b4c17dcc15079d6343a54b76723a2da8580e22fcab914a229f2885d46ce3ac0beb3d1a64a26b1b166acb26b284b25586e1f8d0f3ee175ab69ad80ab1fb623623d1cd750b28c5ba6062d0573ab2b66a83457afce074f5179b8b849fc82d8957121c7bc73b48a64c59e3bd51533769bcb48a61190acf98407ea195ca53ec47b1261227f2fb2652436c094990482889d569b310991c4ae7dcddb375c956a705841a9c5fc87acef7c35f461b4f26d5031b3ce6857f90c78ce931c006f61a3410fef514e1070d07d15cc429d42a86edae22a3650777e94810e873728cc769704660d07a488d3d8efc503fb8c7fdc5de06743fb4936";
@@ -5206,7 +5630,11 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   printf("P+Q: \n");
   ep2_print(p);
   ep2_norm(p, p);
-//  ep2_mul_cof(p, p);
+  printf("P+Q after normalization: \n");
+  ep2_print(p);
+  ep2_mul_cof_b12(p, p);
+  printf("P+Q after Forbenius: \n");
+  ep2_print(p);
 
 
 ////////////////////////////////////////////////////////////
