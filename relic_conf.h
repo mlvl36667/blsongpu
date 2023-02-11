@@ -429,7 +429,7 @@
 /** Left-to-right Width-w NAF. */
 #define LWREG	 5
 /** Chosen prime elliptic curve point multiplication method. */
-#define EP_MUL	 LWNAF
+#define EP_MUL	 BASIC
 
 /** Binary point multiplication. */
 #define BASIC	 1
@@ -440,7 +440,7 @@
 /** Left-to-right Width-w NAF. */
 #define LWNAF	 4
 /** Chosen prime elliptic curve point multiplication method. */
-#define EP_FIX	 COMBS
+#define EP_FIX	 BASIC
 
 /** Basic simultaneouns point multiplication. */
 #define BASIC    1

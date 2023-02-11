@@ -21,6 +21,10 @@
 #define NBLOCKS 1
 #define NTHREADS 1
 
+#define EP_ENDOM
+#define EP_PRECO
+
+
 #define INLINE 0
 /** Prime field size in bits. */
 #define FP_PRIME 381
@@ -32,6 +36,8 @@
 #define BASIC    1
 #define FP_RDC   BASIC
 #define PROJC    2
+#define JACOB    3
+
 /** Use -1 as quadratic non-residue. */
 #define FP_QNRES
 
@@ -274,6 +280,19 @@ typedef dig_t *dv_t;
  * Represents a prime field element with automatic memory allocation.
  */
 typedef dig_t fp_st[RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)];
+
+typedef struct {
+        /** The first coordinate. */
+        fp_st x;
+        /** The second coordinate. */
+        fp_st y;
+        /** The third coordinate (projective representation). */
+        fp_st z;
+        /** Flag to indicate the coordinate system of this point. */
+        int coord;
+} ep_st;
+typedef ep_st *ep_t;
+
 /**
  * Maximum number of coefficients of an isogeny map polynomial.
  * RLC_TERMS of value 16 is sufficient for a degree-11 isogeny polynomial.
@@ -1723,13 +1742,9 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         bn_t q, x, y, r;
         int sign;
 
-// printf("1. bn_div_imp");
         x = (bn_t) malloc(sizeof(bn_st));
-// printf("2. bn_div_imp");
         x->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("3. bn_div_imp");
         x->alloc = RLC_BN_SIZE;
-// printf("4. bn_div_imp");
         x->sign = RLC_POS;
 
         q = (bn_t) malloc(sizeof(bn_st));
@@ -5439,6 +5454,674 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void ep_set_infty(ep_t p) {
+        fp_zero(p->x);
+        fp_zero(p->y);
+        fp_zero(p->z);
+        p->coord = BASIC;
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_mul_fix(ep_t r, const ep_t *t, const bn_t k) {
+ ep_mul_fix_basic(r,t,k);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_copy(ep_t r, const ep_t p) {
+        fp_copy(r->x, p->x);
+        fp_copy(r->y, p->y);
+        fp_copy(r->z, p->z);
+        r->coord = p->coord;
+}    
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+int ep_is_infty(const ep_t p) {
+        return (fp_is_zero(p->z) == 1);
+} 
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_curve_mul_b3(fp_t c, const fp_t a) {
+ dig_t tw; 
+ tw = 12;
+ fp_mul_dig(c, a, tw);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep_add_projc_mix(ep_t r, const ep_t p, const ep_t q) {
+	fp_t t0, t1, t2, t3, t4, t5;
+
+        t0 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t1 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t2 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t3 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t4 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t5 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+//	RLC_TRY {
+
+		/* Formulas for mixed addition from
+		 * "Complete addition formulas for prime order elliptic curves"
+		 * by Joost Renes, Craig Costello, and Lejla Batina
+		 * https://eprint.iacr.org/2015/1060.pdf
+		 */
+
+		 fp_mul(t0, p->x, q->x);
+		 fp_mul(t1, p->y, q->y);
+		 fp_add(t3, q->x, q->y);
+		 fp_add(t4, p->x, p->y);
+		 fp_mul(t3, t3, t4);
+		 fp_add(t4, t0, t1);
+		 fp_sub(t3, t3, t4);
+
+//		 if (ep_curve_opt_a() == RLC_ZERO) {
+ 			/* Cost of 11M + 2m_3b + 13a. */
+			if (p->coord == BASIC) {
+				/* Save 1M + 1m_3b if z1 = 1. */
+				fp_add(t4, q->y, p->y);
+	 			fp_add(r->y, q->x, p->x);
+				fp_add(r->z, t1, ep_curve_get_b3());
+	 			fp_sub(t1, t1, ep_curve_get_b3());
+			} else {
+				fp_mul(t4, q->y, p->z);
+				fp_add(t4, t4, p->y);
+	 			fp_mul(r->y, q->x, p->z);
+	 			fp_add(r->y, r->y, p->x);
+	 			ep_curve_mul_b3(t2, p->z);
+				fp_add(r->z, t1, t2);
+	 			fp_sub(t1, t1, t2);
+			}
+			fp_dbl(r->x, t0);
+			fp_add(t0, t0, r->x);
+ 			ep_curve_mul_b3(r->y, r->y);
+ 			fp_mul(r->x, t4, r->y);
+ 			fp_mul(t2, t3, t1);
+ 			fp_sub(r->x, t2, r->x);
+ 			fp_mul(r->y, t0, r->y);
+ 			fp_mul(t1, t1, r->z);
+ 			fp_add(r->y, t1, r->y);
+ 			fp_mul(t0, t0, t3);
+ 			fp_mul(r->z, r->z, t4);
+ 			fp_add(r->z, r->z, t0);
+// 		 } else if (ep_curve_opt_a() == RLC_MIN3) {
+// 			/* Cost of 11M + 2m_b + 23a. */
+//			if (p->coord == BASIC) {
+//				/* Save 2M + 3a if z1 = 1. */
+//				fp_set_dig(t2, 3);
+//	 			fp_add(t4, q->y, p->y);
+//	 			fp_add(r->y, q->x, p->x);
+//	 			fp_sub(r->x, r->y, ep_curve_get_b());
+//			} else {
+//				fp_dbl(t2, p->z);
+//	 			fp_add(t2, t2, p->z);
+//				fp_mul(t4, q->y, p->z);
+//	 			fp_add(t4, t4, p->y);
+//	 			fp_mul(r->y, q->x, p->z);
+//	 			fp_add(r->y, r->y, p->x);
+//				ep_curve_mul_b(r->z, p->z);
+//	 			fp_sub(r->x, r->y, r->z);
+//			}
+// 			fp_dbl(r->z, r->x);
+// 			fp_add(r->x, r->x, r->z);
+// 			fp_sub(r->z, t1, r->x);
+// 			fp_add(r->x, t1, r->x);
+// 			ep_curve_mul_b(r->y, r->y);
+// 			fp_sub(r->y, r->y, t2);
+// 			fp_sub(r->y, r->y, t0);
+// 			fp_dbl(t1, r->y);
+// 			fp_add(r->y, t1, r->y);
+// 			fp_dbl(t1, t0);
+// 			fp_add(t0, t1, t0);
+// 			fp_sub(t0, t0, t2);
+// 			fp_mul(t1, t4, r->y);
+// 			fp_mul(t2, t0, r->y);
+// 			fp_mul(r->y, r->x, r->z);
+// 			fp_add(r->y, r->y, t2);
+// 			fp_mul(r->x, t3, r->x);
+// 			fp_sub(r->x, r->x, t1);
+// 			fp_mul(r->z, t4, r->z);
+// 			fp_mul(t1, t3, t0);
+// 			fp_add(r->z, r->z, t1);
+// 		} else {
+//			/* Cost of 11M + 3m_a + 2m_3b + 17a. */
+//			if (p->coord == BASIC) {
+//				/* Save 1M + 1m_a + 1m_3b if z1 = 1. */
+//				fp_copy(t2, ep_curve_get_a());
+//				fp_add(t4, q->x, p->x);
+//				fp_add(t5, q->y, p->y);
+//				ep_curve_mul_a(r->z, t4);
+//				fp_add(r->z, r->z, ep_curve_get_b3());
+//			} else {
+//				ep_curve_mul_a(t2, p->z);
+//				fp_mul(t4, q->x, p->z);
+//				fp_add(t4, t4, p->x);
+//				fp_mul(t5, q->y, p->z);
+//				fp_add(t5, t5, p->y);
+//				ep_curve_mul_b3(r->x, p->z);
+//				ep_curve_mul_a(r->z, t4);
+//				fp_add(r->z, r->x, r->z);
+//			}
+//			fp_sub(r->x, t1, r->z);
+//			fp_add(r->z, t1, r->z);
+//			fp_mul(r->y, r->x, r->z);
+//			fp_dbl(t1, t0);
+//			fp_add(t1, t1, t0);
+//			ep_curve_mul_b3(t4, t4);
+//			fp_add(t1, t1, t2);
+//			fp_sub(t2, t0, t2);
+//			ep_curve_mul_a(t2, t2);
+//			fp_add(t4, t4, t2);
+//			fp_mul(t0, t1, t4);
+//			fp_add(r->y, r->y, t0);
+//			fp_mul(t0, t5, t4);
+//			fp_mul(r->x, t3, r->x);
+//			fp_sub(r->x, r->x, t0);
+//			fp_mul(t0, t3, t1);
+//			fp_mul(r->z, t5, r->z);
+//			fp_add(r->z, r->z, t0);
+//		}
+
+		r->coord = PROJC;
+//	}
+//	RLC_CATCH_ANY {
+//		RLC_THROW(ERR_CAUGHT);
+//	}
+//	RLC_FINALLY {
+//		fp_free(t0);
+//		fp_free(t1);
+//		fp_free(t2);
+//		fp_free(t3);
+//		fp_free(t4);
+//		fp_free(t5);
+//	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep_add_projc_imp(ep_t r, const ep_t p, const ep_t q) {
+// #if defined(EP_MIXED) && defined(STRIP)
+// 	/* If code size is a problem, leave only the mixed version. */
+// 	ep_add_projc_mix(r, p, q);
+// #else /* General addition. */
+// 
+// #if defined(EP_MIXED) || !defined(STRIP)
+// 	/* Test if z2 = 1 only if mixed coordinates are turned on. */
+// 	if (q->coord == BASIC) {
+//  printf(" if defined(EP_MIXED) || !defined(STRIP) \n");
+  ep_add_projc_mix(r, p, q);
+// 		return;
+// 	}
+// #endif
+//  printf(" ELSE \n");
+// 
+// 	fp_t t0, t1, t2, t3, t4, t5;
+// 
+// 	fp_null(t0);
+// 	fp_null(t1);
+// 	fp_null(t2);
+// 	fp_null(t3);
+// 	fp_null(t4);
+// 	fp_null(t5);
+// 
+// 	RLC_TRY {
+// 		fp_new(t0);
+// 		fp_new(t1);
+// 		fp_new(t1);
+// 		fp_new(t3);
+// 		fp_new(t4);
+// 		fp_new(t5);
+// 
+// 		/* Formulas for point addition from
+// 		 * "Complete addition formulas for prime order elliptic curves"
+// 		 * by Joost Renes, Craig Costello, and Lejla Batina
+// 		 * https://eprint.iacr.org/2015/1060.pdf
+// 		 */
+// 		fp_mul(t0, p->x, q->x);
+// 		fp_mul(t1, p->y, q->y);
+// 		fp_mul(t2, p->z, q->z);
+// 		fp_add(t3, p->x, p->y);
+// 		fp_add(t4, q->x, q->y);
+// 		fp_mul(t3, t3, t4);
+// 		fp_add(t4, t0, t1);
+// 		fp_sub(t3, t3, t4);
+// 		if (ep_curve_opt_a() == RLC_ZERO) {
+// 			/* Cost of 12M + 2m_3b + 19a. */
+//                         printf("ep_curve_opt_a() == RLC_ZERO \n");
+// 			fp_add(t4, p->y, p->z);
+// 			fp_add(t5, q->y, q->z);
+// 			fp_mul(t4, t4, t5);
+// 			fp_add(t5, t1, t2);
+// 			fp_sub(t4, t4, t5);
+// 			fp_add(r->y, q->x, q->z);
+// 			fp_add(r->x, p->x, p->z);
+// 			fp_mul(r->x, r->x, r->y);
+// 			fp_add(r->y, t0, t2);
+// 			fp_sub(r->y, r->x, r->y);
+// 			fp_dbl(r->x, t0);
+// 			fp_add(t0, t0, r->x);
+// 			ep_curve_mul_b3(t2, t2);
+// 			fp_add(r->z, t1, t2);
+// 			fp_sub(t1, t1, t2);
+// 			ep_curve_mul_b3(r->y, r->y);
+// 			fp_mul(r->x, t4, r->y);
+// 			fp_mul(t2, t3, t1);
+// 			fp_sub(r->x, t2, r->x);
+// 			fp_mul(r->y, t0, r->y);
+// 			fp_mul(t1, t1, r->z);
+// 			fp_add(r->y, t1, r->y);
+// 			fp_mul(t0, t0, t3);
+// 			fp_mul(r->z, r->z, t4);
+// 			fp_add(r->z, r->z, t0);
+// 		} else if (ep_curve_opt_a() == RLC_MIN3) {
+// 			/* Cost of 12M + 2m_b + 29a. */
+//                         printf("ep_curve_opt_a() == RLC_MIN3\n");
+// 			fp_add(t4, p->y, p->z);
+// 			fp_add(t5, q->y, q->z);
+// 			fp_mul(t4, t4, t5);
+// 			fp_add(t5, t1, t2);
+// 			fp_sub(t4, t4, t5);
+// 			fp_add(r->x, p->x, p->z);
+// 			fp_add(r->y, q->x, q->z);
+// 			fp_mul(r->x, r->x, r->y);
+// 			fp_add(r->y, t0, t2);
+// 			fp_sub(r->y, r->x, r->y);
+// 			ep_curve_mul_b(r->z, t2);
+// 			fp_sub(r->x, r->y, r->z);
+// 			fp_dbl(r->z, r->x);
+// 			fp_add(r->x, r->x, r->z);
+// 			fp_sub(r->z, t1, r->x);
+// 			fp_add(r->x, t1, r->x);
+// 			ep_curve_mul_b(r->y, r->y);
+// 			fp_dbl(t1, t2);
+// 			fp_add(t2, t1, t2);
+// 			fp_sub(r->y, r->y, t2);
+// 			fp_sub(r->y, r->y, t0);
+// 			fp_dbl(t1, r->y);
+// 			fp_add(r->y, t1, r->y);
+// 			fp_dbl(t1, t0);
+// 			fp_add(t0, t1, t0);
+// 			fp_sub(t0, t0, t2);
+// 			fp_mul(t1, t4, r->y);
+// 			fp_mul(t2, t0, r->y);
+// 			fp_mul(r->y, r->x, r->z);
+// 			fp_add(r->y, r->y, t2);
+// 			fp_mul(r->x, t3, r->x);
+// 			fp_sub(r->x, r->x, t1);
+// 			fp_mul(r->z, t4, r->z);
+// 			fp_mul(t1, t3, t0);
+// 			fp_add(r->z, r->z, t1);
+// 		} else {
+// 			 /* Cost of 12M + 3m_a + 2_m3b + 23a. */
+//                         printf("elseelseelse\n");
+// 			fp_add(t4, p->x, p->z);
+// 			fp_add(t5, q->x, q->z);
+// 			fp_mul(t4, t4, t5);
+// 			fp_add(t5, t0, t2);
+// 			fp_sub(t4, t4, t5);
+// 			fp_add(t5, p->y, p->z);
+// 			fp_add(r->x, q->y, q->z);
+// 			fp_mul(t5, t5, r->x);
+// 			fp_add(r->x, t1, t2);
+// 			fp_sub(t5, t5, r->x);
+// 			ep_curve_mul_a(r->z, t4);
+// 			ep_curve_mul_b3(r->x, t2);
+// 			fp_add(r->z, r->x, r->z);
+// 			fp_sub(r->x, t1, r->z);
+// 			fp_add(r->z, t1, r->z);
+// 			fp_mul(r->y, r->x, r->z);
+// 			fp_dbl(t1, t0);
+// 			fp_add(t1, t1, t0);
+// 			ep_curve_mul_a(t2, t2);
+// 			ep_curve_mul_b3(t4, t4);
+// 			fp_add(t1, t1, t2);
+// 			fp_sub(t2, t0, t2);
+// 			ep_curve_mul_a(t2, t2);
+// 			fp_add(t4, t4, t2);
+// 			fp_mul(t0, t1, t4);
+// 			fp_add(r->y, r->y, t0);
+// 			fp_mul(t0, t5, t4);
+// 			fp_mul(r->x, t3, r->x);
+// 			fp_sub(r->x, r->x, t0);
+// 			fp_mul(t0, t3, t1);
+// 			fp_mul(r->z, t5, r->z);
+// 			fp_add(r->z, r->z, t0);
+// 		}
+// 
+// 		r->coord = PROJC;
+// 	}
+// 	RLC_CATCH_ANY {
+// 		RLC_THROW(ERR_CAUGHT);
+// 	}
+// 	RLC_FINALLY {
+// 		fp_free(t0);
+// 		fp_free(t1);
+// 		fp_free(t2);
+// 		fp_free(t3);
+// 		fp_free(t4);
+// 		fp_free(t5);
+// 	}
+// #endif
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_add_projc(ep_t r, const ep_t p, const ep_t q) {
+        if (ep_is_infty(p)) {
+                ep_copy(r, q);
+                return;
+        }
+
+        if (ep_is_infty(q)) {
+                ep_copy(r, p);
+                return;
+        }
+
+        ep_add_projc_imp(r, p, q);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_add(ep_t r, const ep_t p, const ep_t q) {
+ ep_add_projc(r,p,q);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep_norm_imp(ep_t r, const ep_t p, int inv) {
+	if (p->coord != BASIC) {
+		fp_t t;
+        t = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+
+			if (inv) {
+				fp_copy(r->z, p->z);
+			} else {
+				fp_inv(r->z, p->z);
+			}
+
+			switch (p->coord) {
+				case PROJC:
+					fp_mul(r->x, p->x, r->z);
+					fp_mul(r->y, p->y, r->z);
+					break;
+				case JACOB:
+					fp_sqr(t, r->z);
+					fp_mul(r->x, p->x, t);
+					fp_mul(t, t, r->z);
+					fp_mul(r->y, p->y, t);
+					break;
+				default:
+					ep_copy(r, p);
+					break;
+			}
+			fp_set_dig(r->z, 1);
+	}
+
+	r->coord = BASIC;
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void ep_norm(ep_t r, const ep_t p, int inv) {
+ ep_norm_imp(r,p,inv);
+
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_neg(ep_t r, const ep_t p) {
+        if (ep_is_infty(p)) {
+                ep_set_infty(r);
+                return;
+        }
+
+        if (r != p) {
+                fp_copy(r->x, p->x); 
+                fp_copy(r->z, p->z);
+        }
+
+        fp_neg(r->y, p->y);
+
+        r->coord = p->coord;
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp_inv_sim(fp_t *c, const fp_t *a, int n) {
+        int i;
+        fp_t u, *t = (fp_t*) malloc((n) * sizeof(fp_t));
+  
+        fp_null(u);     
+                
+//        RLC_TRY {
+                if (t == NULL) {
+                        printf("No memory left in fp_inv_sim...\n");
+                }       
+                for (i = 0; i < n; i++) {
+                        fp_null(t[i]);
+                        fp_new(t[i]);
+                }
+                fp_new(u);
+                        
+                fp_copy(c[0], a[0]);
+                fp_copy(t[0], a[0]);
+      
+                for (i = 1; i < n; i++) {
+                        fp_copy(t[i], a[i]);
+                        fp_mul(c[i], c[i - 1], a[i]);
+                }
+                        
+                fp_inv(u, c[n - 1]);
+        
+                for (i = n - 1; i > 0; i--) {
+                        fp_mul(c[i], u, c[i - 1]);
+                        fp_mul(u, u, t[i]);
+                }
+                fp_copy(c[0], u);
+//        }
+//        RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        }
+//        RLC_FINALLY {
+//                for (i = 0; i < n; i++) {
+//                        fp_free(t[i]);
+//                }
+//                fp_free(u);
+//                RLC_FREE(t);
+//        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_norm_sim(ep_t *r, const ep_t *t, int n) {
+        int i;
+        fp_t* a = (fp_t*) malloc((n) * sizeof(fp_t));
+
+//        RLC_TRY {
+                if (a == NULL) {
+                        printf("No memory left in ep_norm_sim...\n");
+                }
+                for (i = 0; i < n; i++) {
+                        fp_null(a[i]);
+                        fp_new(a[i]);
+                        fp_copy(a[i], t[i]->z);
+                }
+
+                fp_inv_sim(a, (const fp_t *)a, n);
+
+                for (i = 0; i < n; i++) {
+                        fp_copy(r[i]->x, t[i]->x);
+                        fp_copy(r[i]->y, t[i]->y);
+                        if (!ep_is_infty(t[i])) {
+                                fp_copy(r[i]->z, a[i]);
+                        }
+                }
+
+                for (i = 0; i < n; i++) {
+                        ep_norm_imp(r[i], r[i], 1);
+                }
+//        }
+//        RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        }
+//        RLC_FINALLY {
+//                for (i = 0; i < n; i++) {
+//                        fp_free(a[i]);
+//                }
+//                RLC_FREE(a);
+//        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_mul_pre_basic(ep_t *t) {
+        bn_t n;
+        ep_t p;
+
+//                ep_curve_get_ord(n);
+        n = (bn_t) malloc(sizeof(bn_st));
+        n->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+        n->alloc = RLC_BN_SIZE;
+        n->used = 4;
+        n->sign = RLC_POS;
+        n->dp[0] = 18446744069414584321;
+        n->dp[1] = 6034159408538082302;
+        n->dp[2] = 3691218898639771653;
+        n->dp[3] = 8353516859464449352;
+
+        p = (ep_t) malloc(sizeof(ep_st));
+
+        p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+        p->coord = BASIC;
+        p->x[0] = 18103045581585958587;
+        p->x[1] = 7806400890582735599;
+        p->x[2] = 11623291730934869080;
+        p->x[3] = 14080658508445169925;
+        p->x[4] = 2780237799254240271;
+        p->x[5] = 1725392847304644500;
+
+        p->y[0] = 912580534683953121;
+        p->y[1] = 15005087156090211044;
+        p->y[2] = 61670280795567085;
+        p->y[3] = 18227722000993880822;
+        p->y[4] = 11573741888802228964;
+        p->y[5] = 627113611842199793;
+
+        p->z[0] = 1;
+        p->z[1] = 0;
+        p->z[2] = 0;
+        p->z[3] = 0;
+        p->z[4] = 0;
+        p->z[5] = 0;
+
+
+
+                ep_copy(t[0], p);
+                for (int i = 1; i < bn_bits(n); i++) {
+                        ep_dbl(t[i], t[i - 1]);
+                }
+
+                ep_norm_sim(t + 1, (const ep_t *)t + 1, bn_bits(n) - 1);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
+        bn_t n, _k;
+
+        if (bn_is_zero(k)) {
+                ep_set_infty(r);
+                return;
+        }
+
+        _k = (bn_t) malloc(sizeof(bn_st));
+        _k->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+        _k->alloc = RLC_BN_SIZE;
+        _k->sign = RLC_POS;
+
+        n = (bn_t) malloc(sizeof(bn_st));
+        n->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+        n->alloc = RLC_BN_SIZE;
+        n->used = 4;
+        n->sign = RLC_POS;
+        n->dp[0] = 18446744069414584321;
+        n->dp[1] = 6034159408538082302;
+        n->dp[2] = 3691218898639771653;
+        n->dp[3] = 8353516859464449352;
+
+//                ep_curve_get_ord(n);
+                bn_copy(_k, k);
+                if (bn_cmp_abs(_k, n) == RLC_GT) {
+                        bn_mod(_k, _k, n);
+                }
+
+                ep_set_infty(r);
+                for (int i = 0; i < bn_bits(_k); i++) {
+                        if (bn_get_bit(_k, i)) {
+                                ep_add(r, r, t[i]);
+                        }
+                }
+                ep_norm(r, r);
+                if (bn_sign(_k) == RLC_NEG) {
+                        ep_neg(r, r);
+                }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_mul_gen(ep_t r, const bn_t k) {
+        if (bn_is_zero(k)) {
+                ep_set_infty(r);
+                return;
+        }
+
+#ifdef EP_PRECO
+        ep_mul_fix(r, ep_curve_get_tab(), k);
+#else
+        ep_t g;
+
+//        ep_null(g);
+//        ep_new(g);
+//        ep_curve_get_gen(g);
+//        ep_mul(r, g, k);
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void ep2_add_basic(ep2_t r, ep2_t p, ep2_t q) {
         if (ep2_is_infty(p)) {
                 ep2_copy(r, q);
@@ -5655,6 +6338,8 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   ep2_print(p);
 // Itt ki kell számolni a publikus kulcsot a titkos kulcsból
 // A publikus kulcs a privát kulcs x a generátor
+  ep_st* pp;
+  ep_mul_gen(pp, x);
 
 // És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
 // Itt a hash-elést nem kell még egyszer elvégezni, mert a pont már megvan
