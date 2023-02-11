@@ -5653,6 +5653,11 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   ep2_mul_basic(p,p,x);
   printf("Signature: \n");
   ep2_print(p);
+// Itt ki kell számolni a publikus kulcsot a titkos kulcsból
+// A publikus kulcs a privát kulcs x a generátor
+
+// És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
+// Itt a hash-elést nem kell még egyszer elvégezni, mert a pont már megvan
 ////////////////////////////////////////////////////////////
 
   free(x->dp);
