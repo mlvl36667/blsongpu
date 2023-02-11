@@ -5511,6 +5511,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
    uint8_t  idx1;
    ep2_t p;
    ep2_t q;
+   bn_t x;
 
     // mapping of ASCII characters to hex values
    const uint8_t hashmap[] =
@@ -5636,8 +5637,27 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   printf("P+Q after Forbenius: \n");
   ep2_print(p);
 
+// Ez lesz a titkos kulcs
+  x = (bn_t ) malloc(sizeof(bn_st));
+  x->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+  x->alloc = RLC_BN_SIZE;
+  x->used = 4;
+  x->sign = RLC_POS;
 
+  x->dp[0] = 3009970854543074093;
+  x->dp[1] = 13267029053054563775;
+  x->dp[2] = 14040672589829093878;
+  x->dp[3] = 3994853333333984827;
+  bn_print(x);
+// A BLS aláírás a lehashelt üzenet, amiből pont lesz x a titkos kulcs 
+  ep2_mul_basic(p,p,x);
+  printf("Signature: \n");
+  ep2_print(p);
 ////////////////////////////////////////////////////////////
+
+  free(x->dp);
+  free(x);
+
 
   free(msg);
   free(e->dp);
