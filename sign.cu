@@ -6034,6 +6034,7 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
         b3[3] = 0;
         b3[4] = 0;
         b3[5] = 0;
+        printf("1. ep_dbl_projc_imp... \n");
 		/* Formulas for point doubling from
 		 * "Complete addition formulas for prime order elliptic curves"
 		 * by Joost Renes, Craig Costello, and Lejla Batina
@@ -6042,31 +6043,54 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //		 if (ep_curve_opt_a() == RLC_ZERO) {
 			/* Cost of 6M + 2S + 1m_3b + 9a. */
 			fp_sqr(t0, p->y);
+        printf("2. ep_dbl_projc_imp... \n");
 			fp_mul(t3, p->x, p->y);
+        printf("3. ep_dbl_projc_imp... \n");
 
  			if (p->coord == BASIC) {
 				/* Save 1M + 1S + 1m_b3 if z1 = 1. */
+        printf("4. ep_dbl_projc_imp... \n");
 				fp_copy(t1, p->y);
+        printf("5. ep_dbl_projc_imp... \n");
                                 b3[0] = 12;
+        printf("6. ep_dbl_projc_imp... \n");
 				fp_copy(t2, b3);
+        printf("7. ep_dbl_projc_imp... \n");
  			} else {
+        printf("8. ep_dbl_projc_imp... \n");
 				fp_mul(t1, p->y, p->z);
+        printf("9. ep_dbl_projc_imp... \n");
 				fp_sqr(t2, p->z);
+        printf("10. ep_dbl_projc_imp... \n");
 				ep_curve_mul_b3(t2, t2);
+        printf("11. ep_dbl_projc_imp... \n");
  			}
 			fp_dbl(r->z, t0);
+        printf("12. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
+        printf("13. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
+        printf("14. ep_dbl_projc_imp... \n");
  			fp_mul(r->x, t2, r->z);
+        printf("15. ep_dbl_projc_imp... \n");
 			fp_add(r->y, t0, t2);
+        printf("16. ep_dbl_projc_imp... \n");
 			fp_mul(r->z, t1, r->z);
+        printf("17. ep_dbl_projc_imp... \n");
 			fp_dbl(t1, t2);
+        printf("18. ep_dbl_projc_imp... \n");
 			fp_add(t2, t1, t2);
+        printf("19. ep_dbl_projc_imp... \n");
 			fp_sub(t0, t0, t2);
+        printf("20. ep_dbl_projc_imp... \n");
 			fp_mul(r->y, t0, r->y);
+        printf("21. ep_dbl_projc_imp... \n");
 			fp_add(r->y, r->x, r->y);
+        printf("22. ep_dbl_projc_imp... \n");
 			fp_mul(r->x, t0, t3);
+        printf("23. ep_dbl_projc_imp... \n");
 			fp_dbl(r->x, r->x);
+        printf("24. ep_dbl_projc_imp... \n");
 //		} else {
 //			fp_sqr(t0, p->x);
 //			fp_sqr(t1, p->y);
@@ -6142,6 +6166,14 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //		}
 
 		r->coord = PROJC;
+ free(t0);
+ free(t1);
+ free(t2);
+ free(t3);
+ free(t4);
+ free(t5);
+ free(b3);
+ printf("LEAVING ep_dbl_projc_imp... \n");
 }
 
 __device__
@@ -6214,6 +6246,7 @@ void ep_mul_pre_basic(ep_t *t) {
         p->z[5] = 0;
         printf(" Precalculating table: \n");
         ep_copy(t[0], p);
+ printf("bn_bits(n) %d \n",bn_bits(n));
         for (int i = 1; i < bn_bits(n); i++) {
          ep_dbl(t[i], t[i - 1]);
         }
