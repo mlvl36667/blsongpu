@@ -38,6 +38,8 @@
 #define PROJC    2
 #define JACOB    3
 
+#define EP_ADD PROJC
+
 /** Use -1 as quadratic non-residue. */
 #define FP_QNRES
 
@@ -5464,13 +5466,6 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
-void ep_mul_fix(ep_t r, const ep_t *t, const bn_t k) {
- ep_mul_fix_basic(r,t,k);
-}
-__device__
-#if INLINE == 0
-__noinline__
-#endif
 void ep_copy(ep_t r, const ep_t p) {
         fp_copy(r->x, p->x);
         fp_copy(r->y, p->y);
@@ -5500,6 +5495,7 @@ __noinline__
 #endif
 static void ep_add_projc_mix(ep_t r, const ep_t p, const ep_t q) {
 	fp_t t0, t1, t2, t3, t4, t5;
+	fp_t b3;
 
         t0 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
         t1 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
@@ -5507,6 +5503,14 @@ static void ep_add_projc_mix(ep_t r, const ep_t p, const ep_t q) {
         t3 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
         t4 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
         t5 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+        b3 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        b3[0] = 0;
+        b3[1] = 0;
+        b3[2] = 0;
+        b3[3] = 0;
+        b3[4] = 0;
+        b3[5] = 0;
 
 //	RLC_TRY {
 
@@ -5530,8 +5534,9 @@ static void ep_add_projc_mix(ep_t r, const ep_t p, const ep_t q) {
 				/* Save 1M + 1m_3b if z1 = 1. */
 				fp_add(t4, q->y, p->y);
 	 			fp_add(r->y, q->x, p->x);
-				fp_add(r->z, t1, ep_curve_get_b3());
-	 			fp_sub(t1, t1, ep_curve_get_b3());
+                                b3[0] = 12;
+				fp_add(r->z, t1, b3);
+	 			fp_sub(t1, t1, b3);
 			} else {
 				fp_mul(t4, q->y, p->z);
 				fp_add(t4, t4, p->y);
@@ -5878,8 +5883,20 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
-static void ep_norm(ep_t r, const ep_t p, int inv) {
- ep_norm_imp(r,p,inv);
+static void ep_norm(ep_t r, const ep_t p) {
+        if (ep_is_infty(p)) {
+                ep_set_infty(r);
+                return;
+        } 
+                
+        if (p->coord == BASIC) {
+                /* If the point is represented in affine coordinates, just copy it. */
+                ep_copy(r, p);
+                return;
+        }
+#if EP_ADD == PROJC || EP_ADD == JACOB || !defined(STRIP)
+        ep_norm_imp(r, p, 0);
+#endif /* EP_ADD == PROJC */
 
 }
 
@@ -5998,6 +6015,159 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
+	fp_t t0, t1, t2, t3, t4, t5;
+	fp_t b3;
+
+
+        t0 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t1 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t2 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t3 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t4 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        t5 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+        b3 = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+        b3[0] = 0;
+        b3[1] = 0;
+        b3[2] = 0;
+        b3[3] = 0;
+        b3[4] = 0;
+        b3[5] = 0;
+		/* Formulas for point doubling from
+		 * "Complete addition formulas for prime order elliptic curves"
+		 * by Joost Renes, Craig Costello, and Lejla Batina
+		 * https://eprint.iacr.org/2015/1060.pdf
+		 */
+//		 if (ep_curve_opt_a() == RLC_ZERO) {
+			/* Cost of 6M + 2S + 1m_3b + 9a. */
+			fp_sqr(t0, p->y);
+			fp_mul(t3, p->x, p->y);
+
+ 			if (p->coord == BASIC) {
+				/* Save 1M + 1S + 1m_b3 if z1 = 1. */
+				fp_copy(t1, p->y);
+                                b3[0] = 12;
+				fp_copy(t2, b3);
+ 			} else {
+				fp_mul(t1, p->y, p->z);
+				fp_sqr(t2, p->z);
+				ep_curve_mul_b3(t2, t2);
+ 			}
+			fp_dbl(r->z, t0);
+			fp_dbl(r->z, r->z);
+			fp_dbl(r->z, r->z);
+ 			fp_mul(r->x, t2, r->z);
+			fp_add(r->y, t0, t2);
+			fp_mul(r->z, t1, r->z);
+			fp_dbl(t1, t2);
+			fp_add(t2, t1, t2);
+			fp_sub(t0, t0, t2);
+			fp_mul(r->y, t0, r->y);
+			fp_add(r->y, r->x, r->y);
+			fp_mul(r->x, t0, t3);
+			fp_dbl(r->x, r->x);
+//		} else {
+//			fp_sqr(t0, p->x);
+//			fp_sqr(t1, p->y);
+//			fp_mul(t3, p->x, p->y);
+//			fp_dbl(t3, t3);
+//			fp_mul(t4, p->y, p->z);
+//
+//			if (ep_curve_opt_a() == RLC_MIN3) {
+//				/* Cost of 8M + 3S + 2mb + 21a. */
+//				if (p->coord == BASIC) {
+//					/* Save 1S + 1m_b + 2a if z1 = 1. */
+//					fp_set_dig(t2, 3);
+//					fp_copy(r->y, ep_curve_get_b());
+//				} else {
+//					fp_sqr(t2, p->z);
+//					ep_curve_mul_b(r->y, t2);
+//					fp_dbl(t5, t2);
+//					fp_add(t2, t2, t5);
+//				}
+//				fp_mul(r->z, p->x, p->z);
+//				fp_dbl(r->z, r->z);
+//				fp_sub(r->y, r->y, r->z);
+//				fp_dbl(r->x, r->y);
+//				fp_add(r->y, r->x, r->y);
+//				fp_sub(r->x, t1, r->y);
+//				fp_add(r->y, t1, r->y);
+//				fp_mul(r->y, r->x, r->y);
+//				fp_mul(r->x, t3, r->x);
+//				ep_curve_mul_b(r->z, r->z);
+//				fp_sub(t3, r->z, t2);
+//				fp_sub(t3, t3, t0);
+//				fp_dbl(r->z, t3);
+//				fp_add(t3, t3, r->z);
+//				fp_dbl(r->z, t0);
+//				fp_add(t0, t0, r->z);
+//				fp_sub(t0, t0, t2);
+//			} else {
+//				/* Common cost of 8M + 3S + 3m_a + 2m_3b + 15a. */
+//				if (p->coord == BASIC) {
+//					/* Save 1S + 1m_b + 1m_a if z1 = 1. */
+//					fp_copy(r->y, ep_curve_get_b3());
+//					fp_copy(t2, ep_curve_get_a());
+//				} else {
+//					fp_sqr(t2, p->z);
+//					ep_curve_mul_b3(r->y, t2);
+//					ep_curve_mul_a(t2, t2);
+//				}
+//				fp_mul(r->z, p->x, p->z);
+//				fp_dbl(r->z, r->z);
+//				ep_curve_mul_a(r->x, r->z);
+//				fp_add(r->y, r->x, r->y);
+//				fp_sub(r->x, t1, r->y);
+//				fp_add(r->y, t1, r->y);
+//				fp_mul(r->y, r->x, r->y);
+//				fp_mul(r->x, t3, r->x);
+//				ep_curve_mul_b3(r->z, r->z);
+//				fp_sub(t3, t0, t2);
+//				ep_curve_mul_a(t3, t3);
+//				fp_add(t3, t3, r->z);
+//				fp_dbl(r->z, t0);
+//				fp_add(t0, t0, r->z);
+//				fp_add(t0, t0, t2);
+//			}
+//			/* Common part with renamed variables. */
+//			fp_mul(t0, t0, t3);
+//			fp_add(r->y, r->y, t0);
+//			fp_dbl(t2, t4);
+//			fp_mul(t0, t2, t3);
+//			fp_sub(r->x, r->x, t0);
+//			fp_mul(r->z, t2, t1);
+//			fp_dbl(r->z, r->z);
+//			fp_dbl(r->z, r->z);
+//		}
+
+		r->coord = PROJC;
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_dbl_projc(ep_t r, const ep_t p) {
+        if (ep_is_infty(p)) {
+                ep_set_infty(r);
+                return;
+        }
+
+        ep_dbl_projc_imp(r, p);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_dbl(ep_t r, const ep_t p) {
+ ep_dbl_projc(r,p);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void ep_mul_pre_basic(ep_t *t) {
         bn_t n;
         ep_t p;
@@ -6015,9 +6185,11 @@ void ep_mul_pre_basic(ep_t *t) {
 
         p = (ep_t) malloc(sizeof(ep_st));
 
-        p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-        p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-        p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+// nem tudom hogy ez nem okoz-e gondot ha a stack-en allokálódik és nem malloc-olva van a memória
+
+//        p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+//        p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+//        p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
 
         p->coord = BASIC;
         p->x[0] = 18103045581585958587;
@@ -6040,15 +6212,14 @@ void ep_mul_pre_basic(ep_t *t) {
         p->z[3] = 0;
         p->z[4] = 0;
         p->z[5] = 0;
-
-
-
-                ep_copy(t[0], p);
-                for (int i = 1; i < bn_bits(n); i++) {
-                        ep_dbl(t[i], t[i - 1]);
-                }
-
-                ep_norm_sim(t + 1, (const ep_t *)t + 1, bn_bits(n) - 1);
+        printf(" Precalculating table: \n");
+        ep_copy(t[0], p);
+        for (int i = 1; i < bn_bits(n); i++) {
+         ep_dbl(t[i], t[i - 1]);
+        }
+        printf("Generator doubling done \n");
+        ep_norm_sim(t + 1, (const ep_t *)t + 1, bn_bits(n) - 1);
+        printf("Generator normalization done \n");
 }
 
 __device__
@@ -6081,7 +6252,7 @@ void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
 //                ep_curve_get_ord(n);
                 bn_copy(_k, k);
                 if (bn_cmp_abs(_k, n) == RLC_GT) {
-                        bn_mod(_k, _k, n);
+                        bn_mod_basic(_k, _k, n);
                 }
 
                 ep_set_infty(r);
@@ -6095,19 +6266,28 @@ void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
                         ep_neg(r, r);
                 }
 }
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_mul_fix(ep_t r, const ep_t *t, const bn_t k) {
+ ep_mul_fix_basic(r,t,k);
+}
 
 __device__
 #if INLINE == 0
 __noinline__
 #endif
 void ep_mul_gen(ep_t r, const bn_t k) {
+        ep_st *ep_ptr[382];
         if (bn_is_zero(k)) {
                 ep_set_infty(r);
                 return;
         }
 
 #ifdef EP_PRECO
-        ep_mul_fix(r, ep_curve_get_tab(), k);
+        ep_mul_pre_basic(ep_ptr);
+        ep_mul_fix(r, ep_ptr, k);
 #else
         ep_t g;
 
@@ -6449,7 +6629,7 @@ int main(void)
 //  printf("Original Device stack size: %d\n", (int) deviceLimit);
     
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
-  gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 1024));
+  gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 64*1024));
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
 
   cudaEvent_t start, stop;
