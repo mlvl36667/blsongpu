@@ -2690,6 +2690,9 @@ void fp_dblm_low(dig_t *c, const dig_t *a) {
         int i;
         dig_t carry, c0, c1, r0, r1;
 
+        if(c == NULL){
+         printf(" undefined pointer in fp_dblm_low... \n");
+        }
         carry = 0;
         for (i = 0; i < RLC_FP_DIGS; i++, a++) {
                 r0 = (*a) + (*a);
@@ -2697,6 +2700,15 @@ void fp_dblm_low(dig_t *c, const dig_t *a) {
                 r1 = r0 + carry;
                 c1 = (r1 < r0);
                 carry = c0 | c1;
+
+// printf(" r1 %" PRIu64 " \n",r1);
+// printf(" r0 %" PRIu64 " \n",r0);
+// printf(" c1 %" PRIu64 " \n",c1);
+// printf(" c0 %" PRIu64 " \n",c0);
+// printf("i: %d fp_dblm_low 7. \n",i);
+// printf(" c[i] %" PRIu64 " \n",c[i]);
+// printf("i: %d fp_dblm_low 7. \n",i);
+
                 c[i] = r1;
         }
         if (carry || (dv_cmp(c, shared_prime, RLC_FP_DIGS) != RLC_LT)) {
@@ -2906,6 +2918,15 @@ void fp_print(const fp_t a) {
 
 // Ez lehet hogy majd okoz memóriaszivárgást...
 //                bn_free(t);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep_print(const ep_t p) {
+        fp_print(p->x);
+        fp_print(p->y);
+        fp_print(p->z);
 }
 __device__
 #if INLINE == 0
@@ -5649,6 +5670,13 @@ static void ep_add_projc_mix(ep_t r, const ep_t p, const ep_t q) {
 //		fp_free(t4);
 //		fp_free(t5);
 //	}
+ free(t0);
+ free(t1);
+ free(t2);
+ free(t3);
+ free(t4);
+ free(t5);
+ free(b3);
 }
 __device__
 #if INLINE == 0
@@ -5848,36 +5876,55 @@ __device__
 __noinline__
 #endif
 static void ep_norm_imp(ep_t r, const ep_t p, int inv) {
-	if (p->coord != BASIC) {
-		fp_t t;
-        t = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-
-
-			if (inv) {
-				fp_copy(r->z, p->z);
-			} else {
-				fp_inv(r->z, p->z);
-			}
-
-			switch (p->coord) {
-				case PROJC:
-					fp_mul(r->x, p->x, r->z);
-					fp_mul(r->y, p->y, r->z);
-					break;
-				case JACOB:
-					fp_sqr(t, r->z);
-					fp_mul(r->x, p->x, t);
-					fp_mul(t, t, r->z);
-					fp_mul(r->y, p->y, t);
-					break;
-				default:
-					ep_copy(r, p);
-					break;
-			}
-			fp_set_dig(r->z, 1);
-	}
-
-	r->coord = BASIC;
+ fp_t t;
+ 
+// printf("1. ep_norm_imp \n");
+ if (p->coord != BASIC) {
+// printf("2. ep_norm_imp \n");
+  t = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+// printf("3. ep_norm_imp \n");
+  if (inv) {
+// printf("4. ep_norm_imp \n");
+   fp_copy(r->z, p->z);
+// printf("5. ep_norm_imp \n");
+  } else {
+// printf("6. ep_norm_imp \n");
+   fp_inv(r->z, p->z);
+// printf("7. ep_norm_imp \n");
+  }
+// printf("8. ep_norm_imp \n");
+  switch (p->coord) {
+   case PROJC:
+// printf("9. ep_norm_imp \n");
+    fp_mul(r->x, p->x, r->z);
+// printf("10. ep_norm_imp \n");
+    fp_mul(r->y, p->y, r->z);
+// printf("11. ep_norm_imp \n");
+    break;
+   case JACOB:
+// printf("12. ep_norm_imp \n");
+    fp_sqr(t, r->z);
+// printf("13. ep_norm_imp \n");
+    fp_mul(r->x, p->x, t);
+// printf("14. ep_norm_imp \n");
+    fp_mul(t, t, r->z);
+// printf("15. ep_norm_imp \n");
+    fp_mul(r->y, p->y, t);
+// printf("16. ep_norm_imp \n");
+    free(t);
+// printf("17. ep_norm_imp \n");
+    break;
+   default:
+// printf("18. ep_norm_imp \n");
+    ep_copy(r, p);
+// printf("19. ep_norm_imp \n");
+    break;
+   }
+// printf("20. ep_norm_imp \n");
+  fp_set_dig(r->z, 1);
+// printf("21. ep_norm_imp \n");
+ }
+ r->coord = BASIC;
 }
 __device__
 #if INLINE == 0
@@ -5928,17 +5975,15 @@ void fp_inv_sim(fp_t *c, const fp_t *a, int n) {
         int i;
         fp_t u, *t = (fp_t*) malloc((n) * sizeof(fp_t));
   
-        fp_null(u);     
                 
 //        RLC_TRY {
                 if (t == NULL) {
                         printf("No memory left in fp_inv_sim...\n");
                 }       
                 for (i = 0; i < n; i++) {
-                        fp_null(t[i]);
-                        fp_new(t[i]);
+                        t[i] = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
                 }
-                fp_new(u);
+                        u = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
                         
                 fp_copy(c[0], a[0]);
                 fp_copy(t[0], a[0]);
@@ -5960,9 +6005,9 @@ void fp_inv_sim(fp_t *c, const fp_t *a, int n) {
 //                RLC_THROW(ERR_CAUGHT);
 //        }
 //        RLC_FINALLY {
-//                for (i = 0; i < n; i++) {
-//                        fp_free(t[i]);
-//                }
+               for (i = 0; i < n; i++) {
+                        free(t[i]);
+                }
 //                fp_free(u);
 //                RLC_FREE(t);
 //        }
@@ -5976,18 +6021,18 @@ void ep_norm_sim(ep_t *r, const ep_t *t, int n) {
         int i;
         fp_t* a = (fp_t*) malloc((n) * sizeof(fp_t));
 
-//        RLC_TRY {
                 if (a == NULL) {
                         printf("No memory left in ep_norm_sim...\n");
                 }
                 for (i = 0; i < n; i++) {
-                        fp_null(a[i]);
-                        fp_new(a[i]);
+//                        fp_null(a[i]);
+//                        fp_new(a[i]);
+// itt át kell gondolni hogy mennyit foglalunk
+                        a[i] = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
                         fp_copy(a[i], t[i]->z);
                 }
 
                 fp_inv_sim(a, (const fp_t *)a, n);
-
                 for (i = 0; i < n; i++) {
                         fp_copy(r[i]->x, t[i]->x);
                         fp_copy(r[i]->y, t[i]->y);
@@ -5999,16 +6044,9 @@ void ep_norm_sim(ep_t *r, const ep_t *t, int n) {
                 for (i = 0; i < n; i++) {
                         ep_norm_imp(r[i], r[i], 1);
                 }
-//        }
-//        RLC_CATCH_ANY {
-//                RLC_THROW(ERR_CAUGHT);
-//        }
-//        RLC_FINALLY {
-//                for (i = 0; i < n; i++) {
-//                        fp_free(a[i]);
-//                }
-//                RLC_FREE(a);
-//        }
+          for (i = 0; i < n; i++) {
+              free(a[i]);
+             }
 }
 
 __device__
@@ -6034,7 +6072,7 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
         b3[3] = 0;
         b3[4] = 0;
         b3[5] = 0;
-        printf("1. ep_dbl_projc_imp... \n");
+//        printf("1. ep_dbl_projc_imp... \n");
 		/* Formulas for point doubling from
 		 * "Complete addition formulas for prime order elliptic curves"
 		 * by Joost Renes, Craig Costello, and Lejla Batina
@@ -6043,54 +6081,57 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //		 if (ep_curve_opt_a() == RLC_ZERO) {
 			/* Cost of 6M + 2S + 1m_3b + 9a. */
 			fp_sqr(t0, p->y);
-        printf("2. ep_dbl_projc_imp... \n");
+//        printf("2. ep_dbl_projc_imp... \n");
 			fp_mul(t3, p->x, p->y);
-        printf("3. ep_dbl_projc_imp... \n");
+//        printf("3. ep_dbl_projc_imp... \n");
 
  			if (p->coord == BASIC) {
 				/* Save 1M + 1S + 1m_b3 if z1 = 1. */
-        printf("4. ep_dbl_projc_imp... \n");
+//        printf("4. ep_dbl_projc_imp... \n");
 				fp_copy(t1, p->y);
-        printf("5. ep_dbl_projc_imp... \n");
+//        printf("5. ep_dbl_projc_imp... \n");
                                 b3[0] = 12;
-        printf("6. ep_dbl_projc_imp... \n");
+//        printf("6. ep_dbl_projc_imp... \n");
 				fp_copy(t2, b3);
-        printf("7. ep_dbl_projc_imp... \n");
+//        printf("7. ep_dbl_projc_imp... \n");
  			} else {
-        printf("8. ep_dbl_projc_imp... \n");
+//        printf("8. ep_dbl_projc_imp... \n");
 				fp_mul(t1, p->y, p->z);
-        printf("9. ep_dbl_projc_imp... \n");
+//        printf("9. ep_dbl_projc_imp... \n");
 				fp_sqr(t2, p->z);
-        printf("10. ep_dbl_projc_imp... \n");
+//        printf("10. ep_dbl_projc_imp... \n");
 				ep_curve_mul_b3(t2, t2);
-        printf("11. ep_dbl_projc_imp... \n");
+//        printf("11. ep_dbl_projc_imp... \n");
  			}
+        if(r->z == NULL){
+// printf(" r->z == NULL \n");
+        }
 			fp_dbl(r->z, t0);
-        printf("12. ep_dbl_projc_imp... \n");
+//        printf("12. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
-        printf("13. ep_dbl_projc_imp... \n");
+//        printf("13. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
-        printf("14. ep_dbl_projc_imp... \n");
+//        printf("14. ep_dbl_projc_imp... \n");
  			fp_mul(r->x, t2, r->z);
-        printf("15. ep_dbl_projc_imp... \n");
+//        printf("15. ep_dbl_projc_imp... \n");
 			fp_add(r->y, t0, t2);
-        printf("16. ep_dbl_projc_imp... \n");
+//        printf("16. ep_dbl_projc_imp... \n");
 			fp_mul(r->z, t1, r->z);
-        printf("17. ep_dbl_projc_imp... \n");
+//        printf("17. ep_dbl_projc_imp... \n");
 			fp_dbl(t1, t2);
-        printf("18. ep_dbl_projc_imp... \n");
+//        printf("18. ep_dbl_projc_imp... \n");
 			fp_add(t2, t1, t2);
-        printf("19. ep_dbl_projc_imp... \n");
+//        printf("19. ep_dbl_projc_imp... \n");
 			fp_sub(t0, t0, t2);
-        printf("20. ep_dbl_projc_imp... \n");
+//        printf("20. ep_dbl_projc_imp... \n");
 			fp_mul(r->y, t0, r->y);
-        printf("21. ep_dbl_projc_imp... \n");
+//        printf("21. ep_dbl_projc_imp... \n");
 			fp_add(r->y, r->x, r->y);
-        printf("22. ep_dbl_projc_imp... \n");
+//        printf("22. ep_dbl_projc_imp... \n");
 			fp_mul(r->x, t0, t3);
-        printf("23. ep_dbl_projc_imp... \n");
+//        printf("23. ep_dbl_projc_imp... \n");
 			fp_dbl(r->x, r->x);
-        printf("24. ep_dbl_projc_imp... \n");
+//        printf("24. ep_dbl_projc_imp... \n");
 //		} else {
 //			fp_sqr(t0, p->x);
 //			fp_sqr(t1, p->y);
@@ -6165,7 +6206,7 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //			fp_dbl(r->z, r->z);
 //		}
 
-		r->coord = PROJC;
+ r->coord = PROJC;
  free(t0);
  free(t1);
  free(t2);
@@ -6173,7 +6214,7 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
  free(t4);
  free(t5);
  free(b3);
- printf("LEAVING ep_dbl_projc_imp... \n");
+// printf("LEAVING ep_dbl_projc_imp... \n");
 }
 
 __device__
@@ -6246,7 +6287,6 @@ void ep_mul_pre_basic(ep_t *t) {
         p->z[5] = 0;
         printf(" Precalculating table: \n");
         ep_copy(t[0], p);
- printf("bn_bits(n) %d \n",bn_bits(n));
         for (int i = 1; i < bn_bits(n); i++) {
          ep_dbl(t[i], t[i - 1]);
         }
@@ -6262,16 +6302,21 @@ __noinline__
 void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
         bn_t n, _k;
 
+// printf("1. ep_mul_fix_basic \n");
         if (bn_is_zero(k)) {
+// printf("2. ep_mul_fix_basic \n");
                 ep_set_infty(r);
+// printf("3. ep_mul_fix_basic \n");
                 return;
         }
 
+// printf("4. ep_mul_fix_basic \n");
         _k = (bn_t) malloc(sizeof(bn_st));
         _k->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
         _k->alloc = RLC_BN_SIZE;
         _k->sign = RLC_POS;
 
+// printf("5. ep_mul_fix_basic \n");
         n = (bn_t) malloc(sizeof(bn_st));
         n->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
         n->alloc = RLC_BN_SIZE;
@@ -6283,14 +6328,21 @@ void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
         n->dp[3] = 8353516859464449352;
 
 //                ep_curve_get_ord(n);
+// printf("6. ep_mul_fix_basic \n");
                 bn_copy(_k, k);
+// printf("7. ep_mul_fix_basic \n");
                 if (bn_cmp_abs(_k, n) == RLC_GT) {
+// printf("8. ep_mul_fix_basic \n");
                         bn_mod_basic(_k, _k, n);
+// printf("9. ep_mul_fix_basic \n");
                 }
+// printf("10. ep_mul_fix_basic \n");
 
                 ep_set_infty(r);
+// printf("11. ep_mul_fix_basic \n");
                 for (int i = 0; i < bn_bits(_k); i++) {
                         if (bn_get_bit(_k, i)) {
+// printf("12. ep_mul_fix_basic \n");
                                 ep_add(r, r, t[i]);
                         }
                 }
@@ -6313,6 +6365,9 @@ __noinline__
 #endif
 void ep_mul_gen(ep_t r, const bn_t k) {
         ep_st *ep_ptr[382];
+        for(int i = 0; i<382;i++){
+         ep_ptr[i] = (ep_st*) malloc(sizeof(ep_st));
+        }
         if (bn_is_zero(k)) {
                 ep_set_infty(r);
                 return;
@@ -6329,6 +6384,12 @@ void ep_mul_gen(ep_t r, const bn_t k) {
 //        ep_curve_get_gen(g);
 //        ep_mul(r, g, k);
 #endif
+ 
+ printf(" Public key: \n");
+ ep_print(r);
+        for(int i = 0; i<382;i++){
+         free(ep_ptr[i]);
+        }
 }
 
 __device__
@@ -6552,7 +6613,11 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 // Itt ki kell számolni a publikus kulcsot a titkos kulcsból
 // A publikus kulcs a privát kulcs x a generátor
   ep_st* pp;
+  pp = (ep_st*) malloc(sizeof(ep_st));
+
   ep_mul_gen(pp, x);
+
+  free(pp);
 
 // És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
 // Itt a hash-elést nem kell még egyszer elvégezni, mert a pont már megvan
@@ -6661,8 +6726,8 @@ int main(void)
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
 //  printf("Original Device stack size: %d\n", (int) deviceLimit);
     
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
-  gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 64*1024));
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 256*1024*1024);
+  gpuErrChk(cudaDeviceSetLimit(cudaLimitStackSize, 80*1024));
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
 
   cudaEvent_t start, stop;
