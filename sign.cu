@@ -6072,7 +6072,6 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
         b3[3] = 0;
         b3[4] = 0;
         b3[5] = 0;
-//        printf("1. ep_dbl_projc_imp... \n");
 		/* Formulas for point doubling from
 		 * "Complete addition formulas for prime order elliptic curves"
 		 * by Joost Renes, Craig Costello, and Lejla Batina
@@ -6081,57 +6080,51 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //		 if (ep_curve_opt_a() == RLC_ZERO) {
 			/* Cost of 6M + 2S + 1m_3b + 9a. */
 			fp_sqr(t0, p->y);
-//        printf("2. ep_dbl_projc_imp... \n");
+ printf(" t0: \n");
+                        fp_print(t0);
+
 			fp_mul(t3, p->x, p->y);
-//        printf("3. ep_dbl_projc_imp... \n");
+ printf(" t3: \n");
+                        fp_print(t3);
+
 
  			if (p->coord == BASIC) {
 				/* Save 1M + 1S + 1m_b3 if z1 = 1. */
-//        printf("4. ep_dbl_projc_imp... \n");
 				fp_copy(t1, p->y);
-//        printf("5. ep_dbl_projc_imp... \n");
+ printf(" t1: \n");
+                        fp_print(t1);
+
                                 b3[0] = 12;
-//        printf("6. ep_dbl_projc_imp... \n");
 				fp_copy(t2, b3);
-//        printf("7. ep_dbl_projc_imp... \n");
+ printf(" t2: \n");
+                        fp_print(t2);
+
  			} else {
-//        printf("8. ep_dbl_projc_imp... \n");
 				fp_mul(t1, p->y, p->z);
-//        printf("9. ep_dbl_projc_imp... \n");
+ printf(" t1: \n");
+                        fp_print(t1);
+
 				fp_sqr(t2, p->z);
-//        printf("10. ep_dbl_projc_imp... \n");
+ printf(" t2: \n");
+                        fp_print(t2);
+
 				ep_curve_mul_b3(t2, t2);
-//        printf("11. ep_dbl_projc_imp... \n");
+                        fp_print(t2);
+
  			}
-        if(r->z == NULL){
-// printf(" r->z == NULL \n");
-        }
 			fp_dbl(r->z, t0);
-//        printf("12. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
-//        printf("13. ep_dbl_projc_imp... \n");
 			fp_dbl(r->z, r->z);
-//        printf("14. ep_dbl_projc_imp... \n");
  			fp_mul(r->x, t2, r->z);
-//        printf("15. ep_dbl_projc_imp... \n");
 			fp_add(r->y, t0, t2);
-//        printf("16. ep_dbl_projc_imp... \n");
 			fp_mul(r->z, t1, r->z);
-//        printf("17. ep_dbl_projc_imp... \n");
 			fp_dbl(t1, t2);
-//        printf("18. ep_dbl_projc_imp... \n");
 			fp_add(t2, t1, t2);
-//        printf("19. ep_dbl_projc_imp... \n");
 			fp_sub(t0, t0, t2);
-//        printf("20. ep_dbl_projc_imp... \n");
 			fp_mul(r->y, t0, r->y);
-//        printf("21. ep_dbl_projc_imp... \n");
 			fp_add(r->y, r->x, r->y);
-//        printf("22. ep_dbl_projc_imp... \n");
 			fp_mul(r->x, t0, t3);
-//        printf("23. ep_dbl_projc_imp... \n");
 			fp_dbl(r->x, r->x);
-//        printf("24. ep_dbl_projc_imp... \n");
 //		} else {
 //			fp_sqr(t0, p->x);
 //			fp_sqr(t1, p->y);
@@ -6287,7 +6280,13 @@ void ep_mul_pre_basic(ep_t *t) {
         p->z[5] = 0;
         printf(" Precalculating table: \n");
         ep_copy(t[0], p);
-        for (int i = 1; i < bn_bits(n); i++) {
+ printf("bn_bits(n) %d \n",bn_bits(n));
+                for (int i = 1; i < bn_bits(n); i++) {
+ printf(" i: %d \n",i);
+ ep_print(t[i-1]);
+                        ep_dbl(t[i], t[i - 1]);
+ ep_print(t[i]);
+
          ep_dbl(t[i], t[i - 1]);
         }
         printf("Generator doubling done \n");
@@ -6302,21 +6301,16 @@ __noinline__
 void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
         bn_t n, _k;
 
-// printf("1. ep_mul_fix_basic \n");
         if (bn_is_zero(k)) {
-// printf("2. ep_mul_fix_basic \n");
                 ep_set_infty(r);
-// printf("3. ep_mul_fix_basic \n");
                 return;
         }
 
-// printf("4. ep_mul_fix_basic \n");
         _k = (bn_t) malloc(sizeof(bn_st));
         _k->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
         _k->alloc = RLC_BN_SIZE;
         _k->sign = RLC_POS;
 
-// printf("5. ep_mul_fix_basic \n");
         n = (bn_t) malloc(sizeof(bn_st));
         n->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
         n->alloc = RLC_BN_SIZE;
@@ -6328,22 +6322,18 @@ void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
         n->dp[3] = 8353516859464449352;
 
 //                ep_curve_get_ord(n);
-// printf("6. ep_mul_fix_basic \n");
                 bn_copy(_k, k);
-// printf("7. ep_mul_fix_basic \n");
                 if (bn_cmp_abs(_k, n) == RLC_GT) {
-// printf("8. ep_mul_fix_basic \n");
                         bn_mod_basic(_k, _k, n);
-// printf("9. ep_mul_fix_basic \n");
                 }
-// printf("10. ep_mul_fix_basic \n");
 
                 ep_set_infty(r);
-// printf("11. ep_mul_fix_basic \n");
                 for (int i = 0; i < bn_bits(_k); i++) {
                         if (bn_get_bit(_k, i)) {
-// printf("12. ep_mul_fix_basic \n");
+ printf("i: %d \n t[i]",i);
+ ep_print(t[i]);
                                 ep_add(r, r, t[i]);
+ ep_print(r);
                         }
                 }
                 ep_norm(r, r);
