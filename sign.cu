@@ -2204,6 +2204,82 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void bn_read_raw(bn_t a, const dig_t *raw, int len) {
+ bn_grow(a, len); 
+ a->used = len;  
+ a->sign = RLC_POS;
+ dv_copy(a->dp, raw, len);
+ bn_trim(a);
+} 
+//__device__
+//#if INLINE == 0
+//__noinline__
+//#endif
+//void util_print(const char *format, ...) {
+//        va_list list;
+//        va_start(list, format);
+//        vprintf(format, list);
+//        fflush(stdout);
+//        va_end(list);
+//}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void util_print_dig(dig_t a, int pad) {
+if (pad) {
+ printf("%.16" PRIX64, (uint64_t) a);
+ } else {
+ printf("%" PRIX64, (uint64_t) a);
+}
+///if (pad) {
+/// util_print("%.16" PRIX64, (uint64_t) a);
+/// } else {
+/// util_print("%" PRIX64, (uint64_t) a);
+///}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp_print(const fp_t a) {
+        int i;
+        bn_t t;
+
+
+ t  = (bn_t ) malloc(sizeof(bn_st));
+ t->dp = (dig_t* ) malloc(RLC_FP_DIGS * sizeof(dig_t));
+ t->alloc = RLC_FP_DIGS;
+ t->sign = RLC_POS;
+
+//#if FP_RDC == MONTY
+//                if (a != fp_prime_get()) {
+//                        fp_prime_back(t, a);
+//                } else {
+//                        bn_read_raw(t, a, RLC_FP_DIGS);
+//                }
+//#else
+                bn_read_raw(t, a, RLC_FP_DIGS);
+//#endif
+
+                for (i = RLC_FP_DIGS - 1; i > 0; i--) {
+                        if (i >= t->used) {
+                                util_print_dig(0, 1);
+                        } else {
+                                util_print_dig(t->dp[i], 1);
+                        }
+                        printf(" ");
+                }
+                util_print_dig(t->dp[0], 1);
+                printf("\n");
+
+// Ez lehet hogy majd okoz memóriaszivárgást...
+//                bn_free(t);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
         int i;
         dv_t t;
@@ -2212,6 +2288,11 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
 //        dv_null(t);
         /* We need a temporary variable so that c can be a or b. */
 //        dv_new(t);
+// printf(" Multiplying in fp_mul_basic: \n");
+// printf(" a: ");
+// fp_print(a);
+// printf(" b: ");
+// fp_print(b);
         t = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
         dv_zero(t, 2 * RLC_FP_DIGS);
@@ -2842,82 +2923,6 @@ __noinline__
 #endif
 void fp_rdc(fp_t c, dv_t a) {
         fp_rdc_basic(c, a);
-}
-__device__
-#if INLINE == 0
-__noinline__
-#endif
-void bn_read_raw(bn_t a, const dig_t *raw, int len) {
- bn_grow(a, len); 
- a->used = len;  
- a->sign = RLC_POS;
- dv_copy(a->dp, raw, len);
- bn_trim(a);
-} 
-//__device__
-//#if INLINE == 0
-//__noinline__
-//#endif
-//void util_print(const char *format, ...) {
-//        va_list list;
-//        va_start(list, format);
-//        vprintf(format, list);
-//        fflush(stdout);
-//        va_end(list);
-//}
-__device__
-#if INLINE == 0
-__noinline__
-#endif
-void util_print_dig(dig_t a, int pad) {
-if (pad) {
- printf("%.16" PRIX64, (uint64_t) a);
- } else {
- printf("%" PRIX64, (uint64_t) a);
-}
-///if (pad) {
-/// util_print("%.16" PRIX64, (uint64_t) a);
-/// } else {
-/// util_print("%" PRIX64, (uint64_t) a);
-///}
-}
-__device__
-#if INLINE == 0
-__noinline__
-#endif
-void fp_print(const fp_t a) {
-        int i;
-        bn_t t;
-
-
- t  = (bn_t ) malloc(sizeof(bn_st));
- t->dp = (dig_t* ) malloc(RLC_FP_DIGS * sizeof(dig_t));
- t->alloc = RLC_FP_DIGS;
- t->sign = RLC_POS;
-
-//#if FP_RDC == MONTY
-//                if (a != fp_prime_get()) {
-//                        fp_prime_back(t, a);
-//                } else {
-//                        bn_read_raw(t, a, RLC_FP_DIGS);
-//                }
-//#else
-                bn_read_raw(t, a, RLC_FP_DIGS);
-//#endif
-
-                for (i = RLC_FP_DIGS - 1; i > 0; i--) {
-                        if (i >= t->used) {
-                                util_print_dig(0, 1);
-                        } else {
-                                util_print_dig(t->dp[i], 1);
-                        }
-                        printf(" ");
-                }
-                util_print_dig(t->dp[0], 1);
-                printf("\n");
-
-// Ez lehet hogy majd okoz memóriaszivárgást...
-//                bn_free(t);
 }
 __device__
 #if INLINE == 0
@@ -5505,9 +5510,17 @@ __device__
 __noinline__
 #endif
 void ep_curve_mul_b3(fp_t c, const fp_t a) {
- dig_t tw; 
- tw = 12;
- fp_mul_dig(c, a, tw);
+ fp_t tw; 
+ tw = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+ fp_set_dig(tw, 12);
+// printf(" now in ep_curve_mul_b3: \n");
+// printf("a: ");
+// fp_print(a);
+// printf("tw: ");
+// fp_print(tw);
+ fp_mul(c, a, tw);
+// fp_print(c);
+ free(tw);
 }
 
 __device__
@@ -6359,6 +6372,7 @@ void ep_mul_gen(ep_t r, const bn_t k) {
          ep_ptr[i] = (ep_st*) malloc(sizeof(ep_st));
         }
         if (bn_is_zero(k)) {
+
                 ep_set_infty(r);
                 return;
         }
@@ -6595,6 +6609,8 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   x->dp[1] = 13267029053054563775;
   x->dp[2] = 14040672589829093878;
   x->dp[3] = 3994853333333984827;
+  
+ printf("Private key: \n");
   bn_print(x);
 // A BLS aláírás a lehashelt üzenet, amiből pont lesz x a titkos kulcs 
   ep2_mul_basic(p,p,x);
