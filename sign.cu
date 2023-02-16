@@ -6093,36 +6093,36 @@ static void ep_dbl_projc_imp(ep_t r, const ep_t p) {
 //		 if (ep_curve_opt_a() == RLC_ZERO) {
 			/* Cost of 6M + 2S + 1m_3b + 9a. */
 			fp_sqr(t0, p->y);
- printf(" t0: \n");
-                        fp_print(t0);
+// printf(" t0: \n");
+//                        fp_print(t0);
 
 			fp_mul(t3, p->x, p->y);
- printf(" t3: \n");
-                        fp_print(t3);
+// printf(" t3: \n");
+//                        fp_print(t3);
 
 
  			if (p->coord == BASIC) {
 				/* Save 1M + 1S + 1m_b3 if z1 = 1. */
 				fp_copy(t1, p->y);
- printf(" t1: \n");
-                        fp_print(t1);
+// printf(" t1: \n");
+//                        fp_print(t1);
 
                                 b3[0] = 12;
 				fp_copy(t2, b3);
- printf(" t2: \n");
-                        fp_print(t2);
+// printf(" t2: \n");
+//                        fp_print(t2);
 
  			} else {
 				fp_mul(t1, p->y, p->z);
- printf(" t1: \n");
-                        fp_print(t1);
+// printf(" t1: \n");
+//                        fp_print(t1);
 
 				fp_sqr(t2, p->z);
- printf(" t2: \n");
-                        fp_print(t2);
+// printf(" t2: \n");
+//                        fp_print(t2);
 
 				ep_curve_mul_b3(t2, t2);
-                        fp_print(t2);
+//                        fp_print(t2);
 
  			}
 			fp_dbl(r->z, t0);
@@ -6257,6 +6257,7 @@ void ep_mul_pre_basic(ep_t *t) {
         n->alloc = RLC_BN_SIZE;
         n->used = 4;
         n->sign = RLC_POS;
+// Ezeket be lehet drótozni hexában
         n->dp[0] = 18446744069414584321;
         n->dp[1] = 6034159408538082302;
         n->dp[2] = 3691218898639771653;
@@ -6293,12 +6294,12 @@ void ep_mul_pre_basic(ep_t *t) {
         p->z[5] = 0;
         printf(" Precalculating table: \n");
         ep_copy(t[0], p);
- printf("bn_bits(n) %d \n",bn_bits(n));
+// printf("bn_bits(n) %d \n",bn_bits(n));
                 for (int i = 1; i < bn_bits(n); i++) {
- printf(" i: %d \n",i);
- ep_print(t[i-1]);
+// printf(" i: %d \n",i);
+// ep_print(t[i-1]);
                         ep_dbl(t[i], t[i - 1]);
- ep_print(t[i]);
+// ep_print(t[i]);
 
          ep_dbl(t[i], t[i - 1]);
         }
@@ -6343,10 +6344,10 @@ void ep_mul_fix_basic(ep_t r, const ep_t *t, const bn_t k) {
                 ep_set_infty(r);
                 for (int i = 0; i < bn_bits(_k); i++) {
                         if (bn_get_bit(_k, i)) {
- printf("i: %d \n t[i]",i);
- ep_print(t[i]);
+// printf("i: %d \n t[i]",i);
+// ep_print(t[i]);
                                 ep_add(r, r, t[i]);
- ep_print(r);
+// ep_print(r);
                         }
                 }
                 ep_norm(r, r);
@@ -6413,6 +6414,22 @@ void ep2_add_basic(ep2_t r, ep2_t p, ep2_t q) {
 
         ep2_add_basic_imp(r, NULL, p, q);
 }
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+uint64_t xtou64(const char *str)
+{
+    uint64_t res = 0;
+    char c;
+
+    while ((c = *str++)) {
+        char v = (c & 0xF) + (c >> 6) | ((c >> 3) & 0x8);
+        res = (res << 4) | (uint64_t) v;
+    }
+
+    return res;
+} 
 __device__
 #if INLINE == 0
 __noinline__
@@ -6605,10 +6622,16 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   x->used = 4;
   x->sign = RLC_POS;
 
-  x->dp[0] = 3009970854543074093;
-  x->dp[1] = 13267029053054563775;
-  x->dp[2] = 14040672589829093878;
-  x->dp[3] = 3994853333333984827;
+ char privatekey[65] = "377091F0E728463BC2DA7D546C53B9F6B81DF4A1CC1AB5BF29C5908B7151A32D";
+ const char privatekey0[17] = "29C5908B7151A32D";
+ const char privatekey1[17] = "B81DF4A1CC1AB5BF";
+ const char privatekey2[17] = "C2DA7D546C53B9F6";
+ const char privatekey3[17] = "377091F0E728463B";
+
+ x->dp[0] = xtou64(privatekey0);
+ x->dp[1] = xtou64(privatekey1);
+ x->dp[2] = xtou64(privatekey2);
+ x->dp[3] = xtou64(privatekey3);
   
  printf("Private key: \n");
   bn_print(x);
@@ -6627,6 +6650,7 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
 
 // És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
 // Itt a hash-elést nem kell még egyszer elvégezni, mert a pont már megvan
+  `
 ////////////////////////////////////////////////////////////
 
   free(x->dp);
