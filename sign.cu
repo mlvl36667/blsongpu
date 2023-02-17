@@ -100,6 +100,20 @@
 #define B12_P381_ISO_YD "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa8fb,1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa8fb;0,1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa9d3;12,1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa99;1,0"
 #define B12_P381_MAPU0 "-2"
 #define B12_P381_MAPU1 "-1"
+/**
+ * Constant used to indicate that there's some room left in the storage of
+ * prime field elements. This can be used to avoid carries.
+ */
+#if ((FP_PRIME % WSIZE) != 0) && ((FP_PRIME % WSIZE) <= (WSIZE - 2))
+#if ((2 * FP_PRIME % WSIZE) != 0) && ((2 * FP_PRIME % WSIZE) <= (WSIZE - 2))
+#define RLC_FP_ROOM
+#else
+#undef RLC_FP_ROOM
+#endif
+#else
+#undef RLC_FP_ROOM
+#endif
+
 __device__
 #if INLINE == 0
 __noinline__
@@ -6463,6 +6477,764 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void bn_rec_naf(int8_t *naf, int *len, const bn_t k, int w) {
+	int i, l;
+	bn_t t;
+	dig_t t0, mask;
+	int8_t u_i;
+
+	if (*len < (bn_bits(k) + 1)) {
+		*len = 0;
+                 printf(" no buffer in bn_rec_naf \n");
+		return;
+	}
+
+  t = (bn_t ) malloc(sizeof(bn_st));
+  t->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+  t->alloc = RLC_BN_SIZE;
+  t->used = 1;
+  t->sign = RLC_NEG;
+
+		bn_abs(t, k);
+
+		mask = RLC_MASK(w);
+		l = (1 << w);
+
+		memset(naf, 0, *len);
+
+		i = 0;
+		if (w == 2) {
+			while (!bn_is_zero(t)) {
+				if (!bn_is_even(t)) {
+					bn_get_dig(&t0, t);
+					u_i = 2 - (t0 & mask);
+					if (u_i < 0) {
+						bn_add_dig(t, t, -u_i);
+					} else {
+						bn_sub_dig(t, t, u_i);
+					}
+					*naf = u_i;
+				} else {
+					*naf = 0;
+				}
+				bn_hlv(t, t);
+				i++;
+				naf++;
+			}
+		} else {
+			while (!bn_is_zero(t)) {
+				if (!bn_is_even(t)) {
+					bn_get_dig(&t0, t);
+					u_i = t0 & mask;
+					if (u_i > l / 2) {
+						u_i = (int8_t)(u_i - l);
+					}
+					if (u_i < 0) {
+						bn_add_dig(t, t, -u_i);
+					} else {
+						bn_sub_dig(t, t, u_i);
+					}
+					*naf = u_i;
+				} else {
+					*naf = 0;
+				}
+				bn_hlv(t, t);
+				i++;
+				naf++;
+			}
+		}
+		*len = i;
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_subc_low(dv2_t c, dv2_t a, dv2_t b) {
+        fp_subc_low(c[0], a[0], b[0]);
+        fp_subc_low(c[1], a[1], b[1]);
+}     
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_rdcn_low(fp2_t c, dv2_t a) {
+#if FP_RDC == MONTY
+        fp_rdcn_low(c[0], a[0]);
+        fp_rdcn_low(c[1], a[1]);
+#else
+        fp_rdc(c[0], a[0]);
+        fp_rdc(c[1], a[1]);
+#endif
+}
+
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
+	fp2_t t0, t1, t2, t3, t4, t5, t6;
+	dv2_t u0, u1;
+	int one = 1, zero = 0;
+
+//	fp2_null(t0);
+//	fp2_null(t1);
+//	fp2_null(t2);
+//	fp2_null(t3);
+//	fp2_null(t4);
+//	fp2_null(t5);
+//	fp2_null(t6);
+//	dv2_null(u0);
+//	dv2_null(u1);
+
+//		fp2_new(t0);
+//		fp2_new(t1);
+//		fp2_new(t2);
+//		fp2_new(t3);
+//		fp2_new(t4);
+//		fp2_new(t5);
+//		fp2_new(t6);
+//		dv2_new(u0);
+//		dv2_new(u1);
+
+//		if (ep2_curve_is_twist() == RLC_EP_MTYPE) {
+			one ^= 1;
+			zero ^= 1;
+//		}
+
+//		if (ep_curve_opt_b() == RLC_TWO) {
+//			/* C = z1^2. */
+//			fp2_sqr(t0, q->z);
+//			/* B = y1^2. */
+//			fp2_sqr(t1, q->y);
+//			/* t5 = B + C. */
+//			fp2_add(t5, t0, t1);
+//			/* t3 = E = 3b'C = 3C * (1 - i). */
+//			fp2_dbl(t3, t0);
+//			fp2_add(t0, t0, t3);
+//			fp_add(t2[0], t0[0], t0[1]);
+//			fp_sub(t2[1], t0[1], t0[0]);
+//
+//			/* t0 = x1^2. */
+//			fp2_sqr(t0, q->x);
+//			/* t4 = A = (x1 * y1)/2. */
+//			fp2_mul(t4, q->x, q->y);
+//			fp_hlv(t4[0], t4[0]);
+//			fp_hlv(t4[1], t4[1]);
+//			/* t3 = F = 3E. */
+//			fp2_dbl(t3, t2);
+//			fp2_add(t3, t3, t2);
+//			/* x3 = A * (B - F). */
+//			fp2_sub(r->x, t1, t3);
+//			fp2_mul(r->x, r->x, t4);
+//
+//			/* G = (B + F)/2. */
+//			fp2_add(t3, t1, t3);
+//			fp_hlv(t3[0], t3[0]);
+//			fp_hlv(t3[1], t3[1]);
+//
+//			/* y3 = G^2 - 3E^2. */
+//			fp2_sqrn_low(u0, t2);
+//			fp2_addd_low(u1, u0, u0);
+//			fp2_addd_low(u1, u1, u0);
+//			fp2_sqrn_low(u0, t3);
+//			fp2_subc_low(u0, u0, u1);
+//
+//			/* H = (Y + Z)^2 - B - C. */
+//			fp2_add(t3, q->y, q->z);
+//			fp2_sqr(t3, t3);
+//			fp2_sub(t3, t3, t5);
+//
+//			fp2_rdcn_low(r->y, u0);
+//
+//			/* z3 = B * H. */
+//			fp2_mul(r->z, t1, t3);
+//
+//			/* l11 = E - B. */
+//			fp2_sub(l[1][1], t2, t1);
+//
+//			/* l10 = (3 * xp) * t0. */
+//			fp_mul(l[one][zero][0], p->x, t0[0]);
+//			fp_mul(l[one][zero][1], p->x, t0[1]);
+//
+//			/* l01 = F * (-yp). */
+//			fp_mul(l[zero][zero][0], t3[0], p->y);
+//			fp_mul(l[zero][zero][1], t3[1], p->y);
+//		} else {
+			/* A = x1^2. */
+			fp2_sqr(t0, q->x);
+			/* B = y1^2. */
+			fp2_sqr(t1, q->y);
+			/* C = z1^2. */
+			fp2_sqr(t2, q->z);
+			/* D = 3bC, for general b. */
+			fp2_dbl(t3, t2);
+			fp2_add(t3, t3, t2);
+			fp2_mul(t3, t3, ep2_curve_get_b());
+			/* E = (x1 + y1)^2 - A - B. */
+			fp2_add(t4, q->x, q->y);
+			fp2_sqr(t4, t4);
+			fp2_sub(t4, t4, t0);
+			fp2_sub(t4, t4, t1);
+
+			/* F = (y1 + z1)^2 - B - C. */
+			fp2_add(t5, q->y, q->z);
+			fp2_sqr(t5, t5);
+			fp2_sub(t5, t5, t1);
+			fp2_sub(t5, t5, t2);
+
+			/* G = 3D. */
+			fp2_dbl(t6, t3);
+			fp2_add(t6, t6, t3);
+
+			/* x3 = E * (B - G). */
+			fp2_sub(r->x, t1, t6);
+			fp2_mul(r->x, r->x, t4);
+
+			/* y3 = (B + G)^2 -12D^2. */
+			fp2_add(t6, t6, t1);
+			fp2_sqr(t6, t6);
+			fp2_sqr(t2, t3);
+			fp2_dbl(r->y, t2);
+			fp2_dbl(t2, r->y);
+			fp2_dbl(r->y, t2);
+			fp2_add(r->y, r->y, t2);
+			fp2_sub(r->y, t6, r->y);
+
+			/* z3 = 4B * F. */
+			fp2_dbl(r->z, t1);
+			fp2_dbl(r->z, r->z);
+			fp2_mul(r->z, r->z, t5);
+
+			/* l00 = D - B. */
+			fp2_sub(l[one][one], t3, t1);
+
+			/* l10 = (3 * xp) * A. */
+			fp_mul(l[one][zero][0], p->x, t0[0]);
+			fp_mul(l[one][zero][1], p->x, t0[1]);
+
+			/* l01 = F * (-yp). */
+			fp_mul(l[zero][zero][0], t5[0], p->y);
+			fp_mul(l[zero][zero][1], t5[1], p->y);
+//		}
+		r->coord = PROJC;
+//		fp2_free(t0);
+//		fp2_free(t1);
+//		fp2_free(t2);
+//		fp2_free(t3);
+//		fp2_free(t4);
+//		fp2_free(t5);
+//		fp2_free(t6);
+//		dv2_free(u0);
+//		dv2_free(u1);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void pp_dbl_k12(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
+pp_dbl_k12_projc_lazyr(l,r,q,p);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_addm_low(fp2_t c, fp2_t a, fp2_t b) {
+        fp_addm_low(c[0], a[0], b[0]);
+        fp_addm_low(c[1], a[1], b[1]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_addc_low(dv2_t c, dv2_t a, dv2_t b) {
+        fp_addc_low(c[0], a[0], b[0]);
+        fp_addc_low(c[1], a[1], b[1]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_nord_low(dv2_t c, dv2_t a) {
+	dv2_t t;
+
+	dv2_null(t);
+
+	RLC_TRY {
+		dv2_new(t);
+
+#ifdef FP_QNRES
+		/* If p = 3 mod 8, (1 + i) is a QNR/CNR. */
+		/* (a_0 + a_1 * i) * (1 + i) = (a_0 - a_1) + (a_0 + a_1) * u. */
+		dv_copy(t[0], a[1], 2 * RLC_FP_DIGS);
+		fp_addc_low(c[1], a[0], a[1]);
+		fp_subc_low(c[0], a[0], t[0]);
+#else
+		int qnr = fp2_field_get_qnr();
+		switch (fp_prime_get_mod8()) {
+			case 3:
+				/* If p = 3 mod 8, (1 + i) is a QNR, i^2 = -1. */
+				/* (a_0 + a_1 * i) * (1 + i) = (a_0 - a_1) + (a_0 + a_1) * i. */
+				dv_copy(t[0], a[1], 2 * RLC_FP_DIGS);
+				fp_addc_low(c[1], a[0], a[1]);
+				fp_subc_low(c[0], a[0], t[0]);
+				break;
+			case 1:
+			case 5:
+				/* If p = 1,5 mod 8, (i) is a QNR. */
+				dv_copy(t[0], a[0], 2 * RLC_FP_DIGS);
+				dv_zero(t[1], RLC_FP_DIGS);
+				dv_copy(t[1] + RLC_FP_DIGS, fp_prime_get(), RLC_FP_DIGS);
+				fp_subc_low(c[0], t[1], a[1]);
+				for (int i = -1; i > fp_prime_get_qnr(); i--) {
+					fp_subc_low(c[0], c[0], a[1]);
+				}
+				dv_copy(c[1], t[0], 2 * RLC_FP_DIGS);
+				break;
+			case 7:
+				/* If p = 7 mod 8, (2^k + i) is a QNR/CNR.   */
+				dv_copy(t[0], a[0], 2 * RLC_FP_DIGS);
+				dv_copy(t[1], a[1], 2 * RLC_FP_DIGS);
+				while (qnr > 1) {
+					fp2_addc_low(t, t, t);
+					qnr = qnr >> 1;
+				}
+				fp_subc_low(c[0], t[0], a[1]);
+				fp_addc_low(c[1], t[1], a[0]);
+				break;
+		}
+#endif
+	}
+	RLC_CATCH_ANY {
+		RLC_THROW(ERR_CAUGHT);
+	}
+	RLC_FINALLY {
+		dv2_free(t);
+	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_norh_low(dv2_t c, dv2_t a) {
+#ifdef FP_QNRES
+        dv2_t t;
+
+        dv2_null(t);
+
+        RLC_TRY {
+                dv2_new(t);
+
+                /* If p = 3 mod 8, (1 + i) is a QNR/CNR. */
+                /* (a_0 + a_1 * i) * (1 + i) = (a_0 - a_1) + (a_0 + a_1) * u. */
+                dv_copy(t[1], a[1], 2 * RLC_FP_DIGS);
+                fp_addd_low(c[1], a[0], a[1]);
+                /* c_0 = c_0 + 2^N * p/2. */
+                dv_copy(t[0], a[0], 2 * RLC_FP_DIGS);
+                bn_lshb_low(t[0] + RLC_FP_DIGS - 1, t[0] + RLC_FP_DIGS - 1, RLC_FP_DIGS + 1, 1);
+                fp_addn_low(t[0] + RLC_FP_DIGS, t[0] + RLC_FP_DIGS, fp_prime_get());
+                bn_rshb_low(t[0] + RLC_FP_DIGS - 1, t[0] + RLC_FP_DIGS - 1, RLC_FP_DIGS + 1, 1);
+                fp_subd_low(c[0], t[0], t[1]);
+        }
+        RLC_CATCH_ANY {
+                RLC_THROW(ERR_CAUGHT);
+        }
+        RLC_FINALLY {
+                dv2_free(t);
+        }
+#else
+                fp2_nord_low(c, a);
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_muln_low(dv2_t c, fp2_t a, fp2_t b) {
+        rlc_align dig_t t0[2 * RLC_FP_DIGS], t1[2 * RLC_FP_DIGS], t2[2 * RLC_FP_DIGS];
+
+        /* Karatsuba algorithm. */
+
+        /* t0 = a_0 + a_1, t1 = b_0 + b_1. */
+#ifdef RLC_FP_ROOM
+        fp_addn_low(t0, a[0], a[1]);
+        fp_addn_low(t1, b[0], b[1]);
+#else
+        fp_addm_low(t0, a[0], a[1]);
+        fp_addm_low(t1, b[0], b[1]);
+#endif
+        /* c_0 = a_0 * b_0, c_1 = a_1 * b_1. */
+        fp_muln_low(c[0], a[0], b[0]);
+        fp_muln_low(c[1], a[1], b[1]);
+        /* t2 = (a_0 + a_1) * (b_0 + b_1). */
+        fp_muln_low(t2, t0, t1);
+
+        /* t0 = (a_0 * b_0) + (a_1 * b_1). */
+#ifdef RLC_FP_ROOM
+        fp_addd_low(t0, c[0], c[1]);
+#else
+        fp_addc_low(t0, c[0], c[1]);
+#endif
+
+        /* c_0 = (a_0 * b_0) + u^2 * (a_1 * b_1). */
+        fp_subc_low(c[0], c[0], c[1]);
+
+#ifndef FP_QNRES
+        /* t1 = u^2 * (a_1 * b_1). */
+        for (int i = -1; i > fp_prime_get_qnr(); i--) {
+                fp_subc_low(c[0], c[0], c[1]);
+        }
+#endif
+
+        /* c_1 = t2 - t0. */
+#ifdef RLC_FP_ROOM
+        fp_subd_low(c[1], t2, t0);
+#else
+        fp_subc_low(c[1], t2, t0);
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_mulc_low(dv2_t c, fp2_t a, fp2_t b) {
+        rlc_align dig_t t0[2 * RLC_FP_DIGS], t1[2 * RLC_FP_DIGS], t2[2 * RLC_FP_DIGS];
+
+        /* Karatsuba algorithm. */
+
+        /* t0 = a_0 + a_1, t1 = b_0 + b_1. */
+        fp_addn_low(t0, a[0], a[1]);
+        fp_addn_low(t1, b[0], b[1]);
+
+        /* c_0 = a_0 * b_0, c_1 = a_1 * b_1, t2 = (a_0 + a_1) * (b_0 + b_1). */
+        fp_muln_low(c[0], a[0], b[0]);
+        fp_muln_low(c[1], a[1], b[1]);
+        fp_muln_low(t2, t0, t1);
+
+        /* t0 = (a_0 * b_0) + (a_1 * b_1). */
+        fp_addd_low(t0, c[0], c[1]);
+
+        /* c_0 = (a_0 * b_0) + u^2 * (a_1 * b_1). */
+        fp_subd_low(c[0], c[0], c[1]);
+
+#ifndef FP_QNRES
+        /* t1 = u^2 * (a_1 * b_1). */
+        for (int i = -1; i > fp_prime_get_qnr(); i--) {
+                fp_subd_low(c[0], c[0], c[1]);
+        }
+#endif
+
+        /* c_1 = (t2 - t0). */
+        fp_subd_low(c[1], t2, t0);
+
+        /* c_0 = c_0 + 2^N * p/4. */
+        bn_lshb_low(c[0] + RLC_FP_DIGS - 1, c[0] + RLC_FP_DIGS - 1, RLC_FP_DIGS + 1, 2);
+        fp_addn_low(c[0] + RLC_FP_DIGS, c[0] + RLC_FP_DIGS, fp_prime_get());
+        bn_rshb_low(c[0] + RLC_FP_DIGS - 1, c[0] + RLC_FP_DIGS - 1, RLC_FP_DIGS + 1, 2);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+inline static void fp6_mul_dxs_unr_lazyr(dv6_t c, fp6_t a, fp6_t b) {
+	dv2_t u0, u1, u2, u3;
+	fp2_t t0, t1;
+
+//	dv2_null(u0);
+//	dv2_null(u1);
+//	dv2_null(u2);
+//	dv2_null(u3);
+//	fp2_null(t0);
+//	fp2_null(t1);
+//
+//		dv2_new(u0);
+//		dv2_new(u1);
+//		dv2_new(u2);
+//		dv2_new(u3);
+//		fp2_new(t0);
+//		fp2_new(t1);
+
+#ifdef RLC_FP_ROOM
+		fp2_mulc_low(u0, a[0], b[0]);
+		fp2_mulc_low(u1, a[1], b[1]);
+		fp2_addn_low(t0, a[0], a[1]);
+		fp2_addn_low(t1, b[0], b[1]);
+
+		/* c_1 = (a_0 + a_1)(b_0 + b_1) - a_0b_0 - a_1b_1 */
+		fp2_muln_low(u2, t0, t1);
+		fp2_subc_low(u2, u2, u0);
+		fp2_subc_low(c[1], u2, u1);
+
+		/* c_0 = a_0b_0 + E a_2b_1 */
+		fp2_mulc_low(u2, a[2], b[1]);
+		fp2_norh_low(c[0], u2);
+		fp2_addc_low(c[0], u0, c[0]);
+
+		/* c_2 = a_0b_2 + a_1b_1 */
+		fp2_mulc_low(u2, a[2], b[0]);
+		fp2_addc_low(c[2], u1, u2);
+#else
+		fp2_muln_low(u0, a[0], b[0]);
+		fp2_muln_low(u1, a[1], b[1]);
+		fp2_addm_low(t0, a[0], a[1]);
+		fp2_addm_low(t1, b[0], b[1]);
+
+		/* c_1 = (a_0 + a_1)(b_0 + b_1) - a_0b_0 - a_1b_1 */
+		fp2_muln_low(u2, t0, t1);
+		fp2_subc_low(u2, u2, u0);
+		fp2_subc_low(c[1], u2, u1);
+
+		/* c_0 = a_0b_0 + E a_2b_1 */
+		fp2_muln_low(u2, a[2], b[1]);
+		fp2_nord_low(c[0], u2);
+		fp2_addc_low(c[0], u0, c[0]);
+
+		/* c_2 = a_0b_2 + a_1b_1 */
+		fp2_muln_low(u2, a[2], b[0]);
+		fp2_addc_low(c[2], u1, u2);
+#endif
+//		dv2_free(u0);
+//		dv2_free(u1);
+//		dv2_free(u2);
+//		dv2_free(u3);
+//		fp2_free(t0);
+//		fp2_free(t1);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_rdcn_low(fp2_t c, dv2_t a) {
+#if FP_RDC == MONTY
+        fp_rdcn_low(c[0], a[0]);
+        fp_rdcn_low(c[1], a[1]);
+#else           
+        fp_rdc(c[0], a[0]);
+        fp_rdc(c[1], a[1]);
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_add(fp6_t c, fp6_t a, fp6_t b) {
+        fp2_add(c[0], a[0], b[0]);
+        fp2_add(c[1], a[1], b[1]);
+        fp2_add(c[2], a[2], b[2]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_mul_dxs_lazyr(fp12_t c, fp12_t a, fp12_t b) {
+	fp6_t t0;
+	dv6_t u0, u1, u2;
+
+	fp6_null(t0);
+	dv6_null(u0);
+	dv6_null(u1);
+	dv6_null(u2);
+
+		fp6_new(t0);
+		dv6_new(u0);
+		dv6_new(u1);
+		dv6_new(u2);
+
+//		if (ep2_curve_is_twist() == RLC_EP_DTYPE) {
+//#if EP_ADD == BASIC
+//			/* t0 = a_0 * b_0. */
+//			fp_muln_low(u0[0][0], a[0][0][0], b[0][0][0]);
+//			fp_muln_low(u0[0][1], a[0][0][1], b[0][0][0]);
+//			fp_muln_low(u0[1][0], a[0][1][0], b[0][0][0]);
+//			fp_muln_low(u0[1][1], a[0][1][1], b[0][0][0]);
+//			fp_muln_low(u0[2][0], a[0][2][0], b[0][0][0]);
+//			fp_muln_low(u0[2][1], a[0][2][1], b[0][0][0]);
+//			/* t2 = b_0 + b_1. */
+//			fp_add(t0[0][0], b[0][0][0], b[1][0][0]);
+//			fp_copy(t0[0][1], b[1][0][1]);
+//			fp2_copy(t0[1], b[1][1]);
+//#elif EP_ADD == PROJC || EP_ADD == JACOB
+//			/* t0 = a_0 * b_0. */
+//#ifdef RLC_FP_ROOM
+//			fp2_mulc_low(u0[0], a[0][0], b[0][0]);
+//			fp2_mulc_low(u0[1], a[0][1], b[0][0]);
+//			fp2_mulc_low(u0[2], a[0][2], b[0][0]);
+//#else
+//			fp2_muln_low(u0[0], a[0][0], b[0][0]);
+//			fp2_muln_low(u0[1], a[0][1], b[0][0]);
+//			fp2_muln_low(u0[2], a[0][2], b[0][0]);
+//#endif
+//			/* t2 = b_0 + b_1. */
+//			fp2_add(t0[0], b[0][0], b[1][0]);
+//			fp2_copy(t0[1], b[1][1]);
+//#endif
+//			/* t1 = a_1 * b_1. */
+//			fp6_mul_dxs_unr_lazyr(u1, a[1], b[1]);
+//		} else {
+			/* t0 = a_0 * b_0. */
+			fp6_mul_dxs_unr_lazyr(u0, a[0], b[0]);
+#if EP_ADD == BASIC
+			/* t0 = a_0 * b_0. */
+			fp_muln_low(u1[1][0], a[1][2][0], b[1][1][0]);
+			fp_muln_low(u1[1][1], a[1][2][1], b[1][1][0]);
+			fp2_nord_low(u1[0], u1[1]);
+			fp_muln_low(u1[1][0], a[1][0][0], b[1][1][0]);
+			fp_muln_low(u1[1][1], a[1][0][1], b[1][1][0]);
+			fp_muln_low(u1[2][0], a[1][1][0], b[1][1][0]);
+			fp_muln_low(u1[2][1], a[1][1][1], b[1][1][0]);
+			/* t2 = b_0 + b_1. */
+			fp2_copy(t0[0], b[0][0]);
+			fp_add(t0[1][0], b[0][1][0], b[1][1][0]);
+			fp_copy(t0[1][1], b[0][1][1]);
+#elif EP_ADD == PROJC || EP_ADD == JACOB
+			/* t1 = a_1 * b_1. */
+			fp2_muln_low(u1[1], a[1][2], b[1][1]);
+			fp2_nord_low(u1[0], u1[1]);
+			fp2_muln_low(u1[1], a[1][0], b[1][1]);
+			fp2_muln_low(u1[2], a[1][1], b[1][1]);
+			/* t2 = b_0 + b_1. */
+			fp2_copy(t0[0], b[0][0]);
+			fp2_add(t0[1], b[0][1], b[1][1]);
+#endif
+//		}
+		/* c_1 = a_0 + a_1. */
+		fp6_add(c[1], a[0], a[1]);
+		/* c_1 = (a_0 + a_1) * (b_0 + b_1) */
+		fp6_mul_dxs_unr_lazyr(u2, c[1], t0);
+		for (int i = 0; i < 3; i++) {
+			fp2_subc_low(u2[i], u2[i], u0[i]);
+			fp2_subc_low(u2[i], u2[i], u1[i]);
+		}
+		fp2_rdcn_low(c[1][0], u2[0]);
+		fp2_rdcn_low(c[1][1], u2[1]);
+		fp2_rdcn_low(c[1][2], u2[2]);
+
+		fp2_nord_low(u2[0], u1[2]);
+		fp2_addc_low(u0[0], u0[0], u2[0]);
+		fp2_addc_low(u0[1], u0[1], u1[0]);
+		fp2_addc_low(u0[2], u0[2], u1[1]);
+		/* c_0 = a_0b_0 + v * a_1b_1. */
+		fp2_rdcn_low(c[0][0], u0[0]);
+		fp2_rdcn_low(c[0][1], u0[1]);
+		fp2_rdcn_low(c[0][2], u0[2]);
+
+//		fp6_free(t0);
+//		dv6_free(u0);
+//		dv6_free(u1);
+//		dv6_free(u2);
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_mul_dxs(fp12_t c, fp12_t a, fp12_t b) {
+fp12_mul_dxs_lazyr(c,a,b);
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void pp_add_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
+	fp2_t t0, t1, t2, t3;
+	dv2_t u0, u1;
+	int one = 1, zero = 0;
+
+//	fp2_null(t0);
+//	fp2_null(t1);
+//	fp2_null(t2);
+//	fp2_null(t3);
+//	dv2_null(u0);
+//	dv2_null(u1);
+//
+//		fp2_new(t0);
+//		fp2_new(t1);
+//		fp2_new(t2);
+//		fp2_new(t3);
+//		dv2_new(u0);
+//		dv2_new(u1);
+
+
+		fp2_mul(t0, r->z, q->x);
+		fp2_sub(t0, r->x, t0);
+		fp2_mul(t1, r->z, q->y);
+		fp2_sub(t1, r->y, t1);
+
+		fp2_sqr(t2, t0);
+		fp2_mul(r->x, t2, r->x);
+		fp2_mul(t2, t0, t2);
+		fp2_sqr(t3, t1);
+		fp2_mul(t3, t3, r->z);
+		fp2_add(t3, t2, t3);
+
+		fp2_sub(t3, t3, r->x);
+		fp2_sub(t3, t3, r->x);
+		fp2_sub(r->x, r->x, t3);
+#ifdef RLC_FP_ROOM
+		fp2_mulc_low(u0, t1, r->x);
+		fp2_mulc_low(u1, t2, r->y);
+#else
+		fp2_muln_low(u0, t1, r->x);
+		fp2_muln_low(u1, t2, r->y);
+#endif
+		fp2_subc_low(u1, u0, u1);
+		fp2_rdcn_low(r->y, u1);
+		fp2_mul(r->x, t0, t3);
+		fp2_mul(r->z, r->z, t2);
+
+		if (ep2_curve_is_twist() == RLC_EP_MTYPE) {
+			one ^= 1;
+			zero ^= 1;
+		}
+
+		fp_neg(t3[0], p->x);
+		fp_mul(l[one][zero][0], t1[0], t3[0]);
+		fp_mul(l[one][zero][1], t1[1], t3[0]);
+
+#ifdef RLC_FP_ROOM
+		fp2_mulc_low(u0, q->x, t1);
+		fp2_mulc_low(u1, q->y, t0);
+#else
+		fp2_muln_low(u0, q->x, t1);
+		fp2_muln_low(u1, q->y, t0);
+#endif
+		fp2_subc_low(u0, u0, u1);
+		fp2_rdcn_low(l[one][one], u0);
+
+		fp_mul(l[zero][zero][0], t0[0], p->y);
+		fp_mul(l[zero][zero][1], t0[1], p->y);
+
+		r->coord = PROJC;
+
+//		fp2_free(t0);
+//		fp2_free(t1);
+//		fp2_free(t2);
+//		fp2_free(t3);
+//		dv2_free(u0);
+//		dv2_free(u1);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void pp_add_k12(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
+pp_add_k12_projc_lazyr(l,r,q,p);
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 	fp12_t l;
 
@@ -6544,6 +7316,542 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp6_copy(fp6_t c, fp6_t a) { 
+        fp2_copy(c[0], a[0]);
+        fp2_copy(c[1], a[1]);
+        fp2_copy(c[2], a[2]);   
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_neg(fp6_t c, fp6_t a) {
+        fp2_neg(c[0], a[0]);
+        fp2_neg(c[1], a[1]);
+        fp2_neg(c[2], a[2]);
+}
+
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_inv_cyc(fp12_t c, fp12_t a) { 
+        fp6_copy(c[0], a[0]);
+        fp6_neg(c[1], a[1]);
+}  
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_mul_lazyr(fp12_t c, fp12_t a, fp12_t b) {
+        dv12_t t;
+
+        dv12_null(t);
+                        
+        RLC_TRY {
+                dv12_new(t);
+                fp12_mul_unr(t, a, b);
+                for (int i = 0; i < 3; i++) {
+                        fp2_rdcn_low(c[0][i], t[0][i]);
+                        fp2_rdcn_low(c[1][i], t[1][i]);
+                }
+        } RLC_CATCH_ANY {
+                RLC_THROW(ERR_CAUGHT);
+        } RLC_FINALLY {
+                dv12_free(t);
+        }
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_mul(fp12_t c, fp12_t a, fp12_t b) {
+void fp12_mul_lazyr(c, a, b);
+
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_mul_frb(fp2_t c, fp2_t a, int i, int j) {
+        ctx_t *ctx = core_get();
+
+#if ALLOC == AUTO
+        switch(i) {
+                case 1:
+                        fp2_mul(c, a, ctx->fp2_p1[j - 1]);
+                        break; 
+                case 2:
+                        fp2_mul(c, a, ctx->fp2_p2[j - 1]);
+                        break;
+        }
+#else
+        fp2_t t;
+
+//        fp2_null(t);
+//
+//        RLC_TRY {
+//                fp2_new(t);
+
+                switch(i) {
+                        case 1:
+                                fp_copy(t[0], ctx->fp2_p1[j - 1][0]);
+                                fp_copy(t[1], ctx->fp2_p1[j - 1][1]);
+                                break;
+                        case 2:
+                                fp_copy(t[0], ctx->fp2_p2[j - 1][0]);
+                                fp_copy(t[1], ctx->fp2_p2[j - 1][1]);
+                                break;
+                }
+
+                fp2_mul(c, a, t);
+//        }
+//        RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        }
+//        RLC_FINALLY {
+//                fp2_free(t);
+//        }
+#endif
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_frb(fp6_t c, fp6_t a, int i) {
+        /* Cost of two multiplication in Fp^2 per Frobenius. */
+        fp6_copy(c, a);
+        for (; i % 6 > 0; i--) {
+                fp2_frb(c[0], c[0], 1);
+                fp2_frb(c[1], c[1], 1);
+                fp2_frb(c[2], c[2], 1);
+                fp2_mul_frb(c[1], c[1], 1, 2);
+                fp2_mul_frb(c[2], c[2], 1, 4);
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+
+void fp12_copy(fp12_t c, fp12_t a) {
+        fp6_copy(c[0], a[0]);
+        fp6_copy(c[1], a[1]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_frb(fp12_t c, fp12_t a, int i) {
+        /* Cost of five multiplication in Fp^2 per Frobenius. */
+        fp12_copy(c, a);
+        for (; i % 12 > 0; i--) {
+                fp6_frb(c[0], c[0], 1);
+                fp2_frb(c[1][0], c[1][0], 1);
+                fp2_frb(c[1][1], c[1][1], 1);
+                fp2_frb(c[1][2], c[1][2], 1);
+                fp2_mul_frb(c[1][0], c[1][0], 1, 1);
+                fp2_mul_frb(c[1][1], c[1][1], 1, 3);
+                fp2_mul_frb(c[1][2], c[1][2], 1, 5);
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_conv_cyc(fp12_t c, fp12_t a) {
+        fp12_t t;
+
+//        fp12_null(t);
+//
+//                fp12_new(t);
+
+                /* First, compute c = a^(p^6 - 1). */
+                /* t = a^{-1}. */
+                fp12_inv(t, a);
+                /* c = a^(p^6). */
+                fp12_inv_cyc(c, a);
+                /* c = a^(p^6 - 1). */
+                fp12_mul(c, c, t);
+
+                /* Second, compute c^(p^2 + 1). */
+                /* t = c^(p^2). */
+                fp12_frb(t, c, 2);
+
+                /* c = c^(p^2 + 1). */
+                fp12_mul(c, c, t);
+                //fp12_free(t);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_subm_low(fp2_t c, fp2_t a, fp2_t b) {
+        fp_subm_low(c[0], a[0], b[0]);
+        fp_subm_low(c[1], a[1], b[1]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+
+void fp2_dblm_low(fp2_t c, fp2_t a) {
+        fp_dblm_low(c[0], a[0]);
+        fp_dblm_low(c[1], a[1]);
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr_pck_lazyr(fp12_t c, fp12_t a) {
+	fp2_t t0, t1, t2;
+	dv2_t u0, u1, u2, u3;
+
+//	fp2_null(t0);
+//	fp2_null(t1);
+//	fp2_null(t2);
+//	dv2_null(u0);
+//	dv2_null(u1);
+//	dv2_null(u2);
+//	dv2_null(u3);
+//
+//	RLC_TRY {
+//		fp2_new(t0);
+//		fp2_new(t1);
+//		fp2_new(t2);
+//		dv2_new(u0);
+//		dv2_new(u1);
+//		dv2_new(u2);
+//		dv2_new(u3);
+
+		fp2_sqrn_low(u0, a[0][1]);
+		fp2_sqrn_low(u1, a[1][2]);
+		fp2_addm_low(t0, a[0][1], a[1][2]);
+		fp2_sqrn_low(u2, t0);
+
+		fp2_addc_low(u3, u0, u1);
+		fp2_subc_low(u3, u2, u3);
+		fp2_rdcn_low(t0, u3);
+
+		fp2_addm_low(t1, a[1][0], a[0][2]);
+		fp2_sqrm_low(t2, t1);
+		fp2_sqrn_low(u2, a[1][0]);
+
+		fp2_norm_low(t1, t0);
+		fp2_addm_low(t0, t1, a[1][0]);
+		fp2_dblm_low(t0, t0);
+		fp2_addm_low(c[1][0], t0, t1);
+
+		fp2_norh_low(u3, u1);
+		fp2_sqrn_low(u1, a[0][2]);
+		fp2_addc_low(u3, u0, u3);
+		fp2_rdcn_low(t0, u3);
+		fp2_subm_low(t1, t0, a[0][2]);
+		fp2_dblm_low(t1, t1);
+		fp2_addm_low(c[0][2], t1, t0);
+
+		fp2_addc_low(u0, u2, u1);
+		fp2_rdcn_low(t0, u0);
+		fp2_subm_low(t0, t2, t0);
+		fp2_addm_low(t1, t0, a[1][2]);
+		fp2_dblm_low(t1, t1);
+		fp2_addm_low(c[1][2], t0, t1);
+
+		fp2_norh_low(u3, u1);
+		fp2_addc_low(u3, u2, u3);
+		fp2_rdcn_low(t0, u3);
+		fp2_subm_low(t1, t0, a[0][1]);
+		fp2_dblm_low(t1, t1);
+		fp2_addm_low(c[0][1], t1, t0);
+//		fp2_free(t0);
+//		fp2_free(t1);
+//		fp2_free(t2);
+//		dv2_free(u0);
+//		dv2_free(u1);
+//		dv2_free(u2);
+//		dv2_free(u3);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr_pck(fp12_t c, fp12_t a) {
+fp12_sqr_pck_lazyr(c, a);
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_back_cyc_sim(fp12_t c[], fp12_t a[], int n) {
+    fp2_t *t = RLC_ALLOCA(fp2_t, n * 3);
+    fp2_t
+        *t0 = t + 0 * n,
+        *t1 = t + 1 * n,
+        *t2 = t + 2 * n;
+
+	if (n == 0) {
+		RLC_FREE(t);
+		return;
+	}
+
+	//RLC_TRY {
+		if (t == NULL) {
+			RLC_THROW(ERR_NO_MEMORY);
+		}
+		for (int i = 0; i < n; i++) {
+			fp2_null(t0[i]);
+			fp2_null(t1[i]);
+			fp2_null(t2[i]);
+			fp2_new(t0[i]);
+			fp2_new(t1[i]);
+			fp2_new(t2[i]);
+		}
+
+		for (int i = 0; i < n; i++) {
+			/* t0 = g4^2. */
+			fp2_sqr(t0[i], a[i][0][1]);
+			/* t1 = 3 * g4^2 - 2 * g3. */
+			fp2_sub(t1[i], t0[i], a[i][0][2]);
+			fp2_dbl(t1[i], t1[i]);
+			fp2_add(t1[i], t1[i], t0[i]);
+			/* t0 = E * g5^2 + t1. */
+			fp2_sqr(t2[i], a[i][1][2]);
+			fp2_mul_nor(t0[i], t2[i]);
+			fp2_add(t0[i], t0[i], t1[i]);
+			/* t1 = (4 * g2). */
+			fp2_dbl(t1[i], a[i][1][0]);
+			fp2_dbl(t1[i], t1[i]);
+		}
+
+		/* t1 = 1 / t1. */
+		fp2_inv_sim(t1, t1, n);
+
+		for (int i = 0; i < n; i++) {
+			/* t0 = g1. */
+			fp2_mul(c[i][1][1], t0[i], t1[i]);
+
+			/* t1 = g3 * g4. */
+			fp2_mul(t1[i], a[i][0][2], a[i][0][1]);
+			/* t2 = 2 * g1^2 - 3 * g3 * g4. */
+			fp2_sqr(t2[i], c[i][1][1]);
+			fp2_sub(t2[i], t2[i], t1[i]);
+			fp2_dbl(t2[i], t2[i]);
+			fp2_sub(t2[i], t2[i], t1[i]);
+			/* t1 = g2 * g5. */
+			fp2_mul(t1[i], a[i][1][0], a[i][1][2]);
+			/* t2 = E * (2 * g1^2 + g2 * g5 - 3 * g3 * g4) + 1. */
+			fp2_add(t2[i], t2[i], t1[i]);
+			fp2_mul_nor(c[i][0][0], t2[i]);
+			fp_add_dig(c[i][0][0][0], c[i][0][0][0], 1);
+
+			fp2_copy(c[i][0][1], a[i][0][1]);
+			fp2_copy(c[i][0][2], a[i][0][2]);
+			fp2_copy(c[i][1][0], a[i][1][0]);
+			fp2_copy(c[i][1][2], a[i][1][2]);
+		}
+//	} RLC_CATCH_ANY {
+//		RLC_THROW(ERR_CAUGHT);
+//	} RLC_FINALLY {
+//		for (int i = 0; i < n; i++) {
+//			fp2_free(t0[i]);
+//			fp2_free(t1[i]);
+//			fp2_free(t2[i]);
+//		}
+//		RLC_FREE(t);
+//	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
+	int i, j, k, w = len;
+    fp12_t t, *u = RLC_ALLOCA(fp12_t, w);
+
+	if (len == 0) {
+		RLC_FREE(u);
+		fp12_set_dig(c, 1);
+		return;
+	}
+
+	fp12_null(t);
+
+	RLC_TRY {
+		if (u == NULL) {
+			RLC_THROW(ERR_NO_MEMORY);
+		}
+		for (i = 0; i < w; i++) {
+			fp12_null(u[i]);
+			fp12_new(u[i]);
+		}
+		fp12_new(t);
+
+		fp12_copy(t, a);
+		if (b[0] == 0) {
+			for (j = 0, i = 1; i < len; i++) {
+				k = (b[i] < 0 ? -b[i] : b[i]);
+				for (; j < k; j++) {
+					fp12_sqr_pck(t, t);
+				}
+				if (b[i] < 0) {
+					fp12_inv_cyc(u[i - 1], t);
+				} else {
+					fp12_copy(u[i - 1], t);
+				}
+			}
+
+			fp12_back_cyc_sim(u, u, w - 1);
+
+			fp12_copy(c, a);
+			for (i = 0; i < w - 1; i++) {
+				fp12_mul(c, c, u[i]);
+			}
+		} else {
+			for (j = 0, i = 0; i < len; i++) {
+				k = (b[i] < 0 ? -b[i] : b[i]);
+				for (; j < k; j++) {
+					fp12_sqr_pck(t, t);
+				}
+				if (b[i] < 0) {
+					fp12_inv_cyc(u[i], t);
+				} else {
+					fp12_copy(u[i], t);
+				}
+			}
+
+			fp12_back_cyc_sim(u, u, w);
+
+			fp12_copy(c, u[0]);
+			for (i = 1; i < w; i++) {
+				fp12_mul(c, c, u[i]);
+			}
+		}
+
+		if (sign == RLC_NEG) {
+			fp12_inv_cyc(c, c);
+		}
+	}
+	RLC_CATCH_ANY {
+		RLC_THROW(ERR_CAUGHT);
+	}
+	RLC_FINALLY {
+		for (i = 0; i < w; i++) {
+			fp12_free(u[i]);
+		}
+		fp12_free(t);
+		RLC_FREE(u);
+	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void pp_exp_b12(fp12_t c, fp12_t a) {
+	fp12_t t0, t1, t2, t3;
+	bn_t x;
+	const int *b;
+	int l;
+
+//	fp12_null(t0);
+//	fp12_null(t1);
+//	fp12_null(t2);
+//	fp12_null(t3);
+//	bn_null(x);
+//
+//		fp12_new(t0);
+//		fp12_new(t1);
+//		fp12_new(t2);
+//		fp12_new(t3);
+//		bn_new(x);
+
+		/*
+		 * Final exponentiation following Ghammam and Fouotsa:
+		 * On the Computation of Optimal Ate Pairing at the 192-bit Level.
+		 */
+//		fp_prime_get_par(x);
+
+  x = (bn_t ) malloc(sizeof(bn_st));
+  x->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+  x->alloc = RLC_BN_SIZE;
+  x->used = 4;
+  x->sign = RLC_POS;
+  x->dp[0] = 1;
+
+		b = fp_prime_get_par_sps(&l);
+
+		/* First, compute m^(p^6 - 1)(p^2 + 1). */
+		fp12_conv_cyc(c, a);
+
+		/* Now compute m^((p^4 - p^2 + 1) / r). */
+		/* t0 = f^2. */
+		fp12_sqr_cyc(t0, c);
+
+		/* t1 = f^x. */
+		fp12_exp_cyc_sps(t1, c, b, l, bn_sign(x));
+
+		/* t2 = f^(x^2). */
+		fp12_exp_cyc_sps(t2, t1, b, l, bn_sign(x));
+
+		/* t1 = t2/(t1^2 * f). */
+		fp12_inv_cyc(t3, c);
+		fp12_sqr_cyc(t1, t1);
+		fp12_mul(t1, t1, t3);
+		fp12_inv_cyc(t1, t1);
+		fp12_mul(t1, t1, t2);
+
+		/* t2 = t1^x. */
+		fp12_exp_cyc_sps(t2, t1, b, l, bn_sign(x));
+
+		/* t3 = t2^x/t1. */
+		fp12_exp_cyc_sps(t3, t2, b, l, bn_sign(x));
+		fp12_inv_cyc(t1, t1);
+		fp12_mul(t3, t1, t3);
+
+		/* t1 = t1^(-p^3 ) * t2^(p^2). */
+		fp12_inv_cyc(t1, t1);
+		fp12_frb(t1, t1, 3);
+		fp12_frb(t2, t2, 2);
+		fp12_mul(t1, t1, t2);
+
+		/* t2 = f * f^2 * t3^x. */
+		fp12_exp_cyc_sps(t2, t3, b, l, bn_sign(x));
+		fp12_mul(t2, t2, t0);
+		fp12_mul(t2, t2, c);
+
+		/* Compute t1 * t2 * t3^p. */
+		fp12_mul(t1, t1, t2);
+		fp12_frb(t2, t3, 1);
+		fp12_mul(c, t1, t2);
+
+//		fp12_free(t0);
+`
+//		fp12_free(t1);
+//		fp12_free(t2);
+//		fp12_free(t3);
+//		bn_free(x);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void pp_exp_k12(fp12_t c, fp12_t a) {
+pp_exp_b12(c, a);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
 //void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
  printf(" Calculating pairing...\n");
@@ -6584,7 +7892,6 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
    fp12_inv_cyc(r, r);
   }
   pp_exp_k12(r, r);
-
 
   free(p);
   free(q);
