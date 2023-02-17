@@ -5,7 +5,7 @@
 //  sudo reboot
 //  lsmod | grep nvidia.drm
 //  sudo sh cuda_12.0.0_525.60.13_linux.run
-//  sudo /usr/local/NVIDIA-Nsight-Compute-2022.4/ncu --call-stack -f --set detailed -k saxpy -o res ./sign --metrics gpu__time_duration.sum
+//  sudo /usr/local/NVIDIA-Nsight-Compute-2022.4/ncu --call-stack -f --set detailed -k runbls -o res ./sign --metrics gpu__time_duration.sum
 
 #include <stdio.h>
 #include <malloc.h>
@@ -307,6 +307,9 @@ typedef ep_st *ep_t;
  * square root in the prime field.
  */
 typedef fp_t fp2_t[2];
+typedef fp2_t fp6_t[3];
+typedef fp6_t fp12_t[2];
+
 /**
  * Coefficients of an isogeny map for a curve over a quadratic extension.
  */
@@ -6434,6 +6437,171 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp6_set_dig(fp6_t a, dig_t b) { 
+        fp2_set_dig(a[0], b);
+        fp2_zero(a[1]);
+        fp2_zero(a[2]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_zero(fp6_t a) {
+        fp2_zero(a[0]);
+        fp2_zero(a[1]);
+        fp2_zero(a[2]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_set_dig(fp12_t a, dig_t b) {
+        fp6_set_dig(a[0], b);
+        fp6_zero(a[1]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
+	fp12_t l;
+
+        ep_t _p = (ep_t*) malloc((m) * sizeof(ep_t));
+        ep2_t _q = (ep2_t*) malloc((m) * sizeof(ep2_t));
+
+	int i, j, len = bn_bits(a) + 1;
+
+	int8_t s[RLC_FP_BITS + 1];
+
+	if (m == 0) {
+		return;
+	}
+
+//	fp12_null(l);
+	fp12_new(l);
+
+		if (_p == NULL || _q == NULL) {
+ printf(" No memory left in pp_mil_k12 \n");
+		}
+		for (j = 0; j < m; j++) {
+			ep_null(_p[j]);
+			ep2_null(_q[j]);
+			ep_new(_p[j]);
+			ep2_new(_q[j]);
+			ep2_copy(t[j], q[j]);
+			ep2_neg(_q[j], q[j]);
+#if EP_ADD == BASIC
+			ep_neg(_p[j], p[j]);
+#else
+			fp_add(_p[j]->x, p[j]->x, p[j]->x);
+			fp_add(_p[j]->x, _p[j]->x, p[j]->x);
+			fp_neg(_p[j]->y, p[j]->y);
+#endif
+		}
+
+		fp12_zero(l);
+		bn_rec_naf(s, &len, a, 2);
+		pp_dbl_k12(r, t[0], t[0], _p[0]);
+		for (j = 1; j < m; j++) {
+			pp_dbl_k12(l, t[j], t[j], _p[j]);
+			fp12_mul_dxs(r, r, l);
+		}
+		if (s[len - 2] > 0) {
+			for (j = 0; j < m; j++) {
+				pp_add_k12(l, t[j], q[j], p[j]);
+				fp12_mul_dxs(r, r, l);
+			}
+		}
+		if (s[len - 2] < 0) {
+			for (j = 0; j < m; j++) {
+				pp_add_k12(l, t[j], _q[j], p[j]);
+				fp12_mul_dxs(r, r, l);
+			}
+		}
+
+		for (i = len - 3; i >= 0; i--) {
+			fp12_sqr(r, r);
+			for (j = 0; j < m; j++) {
+				pp_dbl_k12(l, t[j], t[j], _p[j]);
+				fp12_mul_dxs(r, r, l);
+				if (s[i] > 0) {
+					pp_add_k12(l, t[j], q[j], p[j]);
+					fp12_mul_dxs(r, r, l);
+				}
+				if (s[i] < 0) {
+					pp_add_k12(l, t[j], _q[j], p[j]);
+					fp12_mul_dxs(r, r, l);
+				}
+			}
+		}
+		fp12_free(l);
+		for (j = 0; j < m; j++) {
+			ep_free(_p[j]);
+			ep2_free(_q[j]);
+		}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
+//void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
+ printf(" Calculating pairing...\n");
+
+        p = (ep_t*) malloc((m) * sizeof(ep_t));
+        q = (ep2_t*) malloc((m) * sizeof(ep2_t));
+
+        ep_t  *_p = (ep_t*) malloc((m) * sizeof(ep_t));
+        ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep_t));
+        ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep_t));
+
+        if (_p == NULL || _q == NULL || t == NULL) {
+         printf(" No memory in pp_map_sim_oatep_k12...\n");
+        }
+        bn_t a;
+
+  a = (bn_t ) malloc(sizeof(bn_st));
+  a->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
+  a->alloc = RLC_BN_SIZE;
+  a->used = 1;
+  a->sign = RLC_NEG;
+  a->dp[0] = 15132376222941642752;
+  bn_print(a);
+
+        int i, j;
+        j = 0;
+        for (i = 0; i < m; i++) {
+         if (!ep_is_infty(p[i]) && !ep2_is_infty(q[i])) {
+          ep_norm(_p[j], p[i]);
+          ep2_norm(_q[j++], q[i]);
+         }
+        }
+
+  fp12_set_dig(r, 1);
+  /* r = f_{|a|,Q}(P). */
+  pp_mil_k12(r, t, _q, _p, j, a);
+  if (bn_sign(a) == RLC_NEG) {
+   fp12_inv_cyc(r, r);
+  }
+  pp_exp_k12(r, r);
+
+
+  free(p);
+  free(q);
+  free(_p);
+  free(_q);
+  free(t);
+  free(a->dp);
+  free(a);
+
+
+        
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void convert_from_hexa(uint8_t *source_array, uint64_t *target_array, int max_index, int block_size){
 
   for(int index=0; index < max_index; index++){
@@ -6482,7 +6650,7 @@ void convert_from_hexa(uint8_t *source_array, uint64_t *target_array, int max_in
 
 }
 __global__
-void saxpy(uint8_t *prime, uint64_t *prime2)
+void runbls(uint8_t *prime, uint64_t *prime2)
 {
  bn_t e, e2;
    uint8_t  idx0;
@@ -6647,10 +6815,15 @@ void saxpy(uint8_t *prime, uint64_t *prime2)
   ep_mul_gen(pp, x);
 
   free(pp);
+  ep_t *ppp; 
+  ep2_t *qq;
+  fp12_t rrr;
+  pp_map_sim_oatep_k12(rrr, ppp,qq,2);
+
 
 // És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
 // Itt a hash-elést nem kell még egyszer elvégezni, mert a pont már megvan
-  `
+
 ////////////////////////////////////////////////////////////
 
   free(x->dp);
@@ -6766,7 +6939,7 @@ int main(void)
   cudaEventCreate(&start);
   cudaEventRecord(start,0);
 
-  saxpy<<<NBLOCKS, NTHREADS>>>(cuda_prime, cuda_prime_2);
+  runbls<<<NBLOCKS, NTHREADS>>>(cuda_prime, cuda_prime_2);
 
 
   cudaEventCreate(&stop);
