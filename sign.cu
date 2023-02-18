@@ -295,6 +295,7 @@ typedef dig_t *fp_t;
 typedef dig_t *dv_t;
 typedef dv_t dv2_t[2];
 typedef dv2_t dv6_t[3];
+typedef dv2_t dv4_t[2];
 typedef dv6_t dv12_t[2];
 
 
@@ -331,6 +332,8 @@ typedef ep_st *ep_t;
 typedef fp_t fp2_t[2];
 typedef fp2_t fp6_t[3];
 typedef fp6_t fp12_t[2];
+typedef fp2_t fp4_t[2];
+
 
 /**
  * Coefficients of an isogeny map for a curve over a quadratic extension.
@@ -382,6 +385,14 @@ __noinline__
 #endif
 int util_bits_dig(dig_t a) {
     return RLC_DIG - lzcnt64_generic(a);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp4_new(fp4_t p) {
+ fp2_new(p[0]); 
+ fp2_new(p[1]); 
 }
 __device__
 #if INLINE == 0
@@ -6709,6 +6720,14 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void dv4_new(dv4_t t) {
+       dv2_new(t[0]);
+       dv2_new(t[1]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 dig_t fp_dbln_low(dig_t *c, const dig_t *a) {
         int i;
         dig_t carry, c0, c1, r0, r1;
@@ -7494,14 +7513,311 @@ __device__
 __noinline__
 #endif
 void ep_new(ep_t p){
-  ep_t p = (ep_t*) malloc(sizeof(ep_t));
+  p = (ep_t*) malloc(sizeof(ep_t));
   if(p == NULL){
-   printf(" no memory left in ep_new...\n");
+   printf("1. no memory left in ep_new...\n");
   }
   p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->x == NULL){
+   printf("2. no memory left in ep_new...\n");
+  }
   p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->y == NULL){
+   printf("3. no memory left in ep_new...\n");
+  }
   p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->z == NULL){
+   printf("4. no memory left in ep_new...\n");
+  }
 }
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void ep2_new(ep2_t p){
+  p = (ep2_t*) malloc(sizeof(ep2_t));
+  if(p == NULL){
+   printf("1. no memory left in ep2_new...\n");
+  }
+
+  p->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->x[0] == NULL){
+   printf("2. no memory left in ep2_new...\n");
+  }
+  p->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->x[1] == NULL){
+   printf("3. no memory left in ep2_new...\n");
+  }
+
+  p->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->y[0] == NULL){
+   printf("4. no memory left in ep2_new...\n");
+  }
+  p->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->y[1] == NULL){
+   printf("5. no memory left in ep2_new...\n");
+  }
+
+  p->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->z[0] == NULL){
+   printf("6. no memory left in ep2_new...\n");
+  }
+  p->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  if(p->z[1] == NULL){
+   printf("7. no memory left in ep2_new...\n");
+  }
+
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp4_mul_unr(dv4_t c, fp4_t a, fp4_t b) {
+        fp2_t t0, t1;
+        dv2_t u0, u1;
+
+//        fp2_null(t0);
+//        fp2_null(t1);
+//        dv2_null(u0);
+//        dv2_null(u1);
+
+//        RLC_TRY {
+                fp2_new(t0);
+                fp2_new(t1);
+                dv2_new(u0);
+                dv2_new(u1);
+
+#ifdef RLC_FP_ROOM
+                fp2_mulc_low(u0, a[0], b[0]);
+                fp2_mulc_low(u1, a[1], b[1]);
+                fp2_addn_low(t0, b[0], b[1]);
+                fp2_addn_low(t1, a[0], a[1]);
+#else
+                fp2_muln_low(u0, a[0], b[0]);
+                fp2_muln_low(u1, a[1], b[1]);
+                fp2_addm_low(t0, b[0], b[1]);
+                fp2_addm_low(t1, a[0], a[1]);
+#endif
+                fp2_muln_low(c[1], t1, t0);
+                fp2_subc_low(c[1], c[1], u0);
+                fp2_subc_low(c[1], c[1], u1);
+#ifdef RLC_FP_ROOM
+                fp2_norh_low(c[0], u1);
+#else
+                fp2_nord_low(c[0], u1);
+#endif
+                fp2_addc_low(c[0], c[0], u0);
+//        } RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        } RLC_FINALLY {
+                fp2_free(t0);
+                dv2_free(t1);
+                dv2_free(u0);
+                dv2_free(u1);
+//        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp4_sqr_unr(dv4_t c, fp4_t a) {
+        fp2_t t;
+        dv2_t u0, u1;
+
+ //       fp2_null(t);
+ //       dv2_null(u0);
+ //       dv2_null(u1);
+
+//        RLC_TRY {
+                fp2_new(t);
+                dv2_new(u0);
+                dv2_new(u1);
+      
+                /* t0 = a^2. */
+                fp2_sqrn_low(u0, a[0]);
+                /* t1 = b^2. */
+                fp2_sqrn_low(u1, a[1]);
+
+                fp2_addm_low(t, a[0], a[1]);
+
+                /* c = a^2  + b^2 * E. */
+                fp2_norh_low(c[0], u1);
+                fp2_addc_low(c[0], c[0], u0);
+
+                /* d = (a + b)^2 - a^2 - b^2 = 2 * a * b. */
+                fp2_addc_low(u1, u1, u0);
+                fp2_sqrn_low(c[1], t);
+                fp2_subc_low(c[1], c[1], u1);
+//        } RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        } RLC_FINALLY {
+                fp2_free(t);
+                dv2_free(u0);
+                dv2_free(u1);
+//        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp_hlvd_low(dig_t *c, const dig_t *a) {
+        dig_t carry = 0;
+
+        if (a[0] & 1) {
+                carry = fp_addn_low(c, a, shared_prime);
+//                carry = fp_addn_low(c, a, fp_prime_get());
+        } else {
+                dv_copy(c, a, RLC_FP_DIGS);
+        }
+
+        fp_add1_low(c + RLC_FP_DIGS, a + RLC_FP_DIGS, carry);
+
+        carry = fp_rsh1_low(c + RLC_FP_DIGS, c + RLC_FP_DIGS);
+        fp_rsh1_low(c, c);
+        if (carry) {
+                c[RLC_FP_DIGS - 1] ^= ((dig_t)1 << (RLC_DIG - 1));
+        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr_unr(dv12_t c, fp12_t a) {
+	fp4_t t0, t1;
+	dv4_t u0, u1, u2, u3, u4;
+
+//	fp4_null(t0);
+//	fp4_null(t1);
+//	dv4_null(u0);
+//	dv4_null(u1);
+//	dv4_null(u2);
+//	dv4_null(u3);
+//	dv4_null(u4);
+
+//	RLC_TRY {
+		fp4_new(t0);
+		fp4_new(t1);
+		dv4_new(u0);
+		dv4_new(u1);
+		dv4_new(u2);
+		dv4_new(u3);
+		dv4_new(u4);
+
+		/* a0 = (a00, a11). */
+		/* a1 = (a10, a02). */
+		/* a2 = (a01, a12). */
+
+		/* (t0,t1) = a0^2 */
+		fp2_copy(t0[0], a[0][0]);
+		fp2_copy(t0[1], a[1][1]);
+		fp4_sqr_unr(u0, t0);
+
+		/* (t2,t3) = 2 * a1 * a2 */
+		fp2_copy(t0[0], a[1][0]);
+		fp2_copy(t0[1], a[0][2]);
+		fp2_copy(t1[0], a[0][1]);
+		fp2_copy(t1[1], a[1][2]);
+		fp4_mul_unr(u1, t0, t1);
+		fp2_addc_low(u1[0], u1[0], u1[0]);
+		fp2_addc_low(u1[1], u1[1], u1[1]);
+
+		/* (t4,t5) = a2^2. */
+		fp4_sqr_unr(u2, t1);
+
+		/* c2 = a0 + a2. */
+		fp2_addm_low(t1[0], a[0][0], a[0][1]);
+		fp2_addm_low(t1[1], a[1][1], a[1][2]);
+
+		/* (t6,t7) = (a0 + a2 + a1)^2. */
+		fp2_addm_low(t0[0], t1[0], a[1][0]);
+		fp2_addm_low(t0[1], t1[1], a[0][2]);
+		fp4_sqr_unr(u3, t0);
+
+		/* c2 = (a0 + a2 - a1)^2. */
+		fp2_subm_low(t0[0], t1[0], a[1][0]);
+		fp2_subm_low(t0[1], t1[1], a[0][2]);
+		fp4_sqr_unr(u4, t0);
+
+		/* c2 = (c2 + (t6,t7))/2. */
+#ifdef RLC_FP_ROOM
+		fp2_addd_low(u4[0], u4[0], u3[0]);
+		fp2_addd_low(u4[1], u4[1], u3[1]);
+#else
+		fp2_addc_low(u4[0], u4[0], u3[0]);
+		fp2_addc_low(u4[1], u4[1], u3[1]);
+#endif
+		fp_hlvd_low(u4[0][0], u4[0][0]);
+		fp_hlvd_low(u4[0][1], u4[0][1]);
+		fp_hlvd_low(u4[1][0], u4[1][0]);
+		fp_hlvd_low(u4[1][1], u4[1][1]);
+
+		/* (t6,t7) = (t6,t7) - c2 - (t2,t3). */
+		fp2_subc_low(u3[0], u3[0], u4[0]);
+		fp2_subc_low(u3[1], u3[1], u4[1]);
+		fp2_subc_low(u3[0], u3[0], u1[0]);
+		fp2_subc_low(u3[1], u3[1], u1[1]);
+
+		/* c2 = c2 - (t0,t1) - (t4,t5). */
+		fp2_subc_low(u4[0], u4[0], u0[0]);
+		fp2_subc_low(u4[1], u4[1], u0[1]);
+		fp2_subc_low(c[0][1], u4[0], u2[0]);
+		fp2_subc_low(c[1][2], u4[1], u2[1]);
+
+		/* c1 = (t6,t7) + (t4,t5) * E. */
+		fp2_nord_low(u4[1], u2[1]);
+		fp2_addc_low(c[1][0], u3[0], u4[1]);
+		fp2_addc_low(c[0][2], u3[1], u2[0]);
+
+		/* c0 = (t0,t1) + (t2,t3) * E. */
+		fp2_nord_low(u4[1], u1[1]);
+		fp2_addc_low(c[0][0], u0[0], u4[1]);
+		fp2_addc_low(c[1][1], u0[1], u1[0]);
+//	} RLC_CATCH_ANY {
+//		RLC_THROW(ERR_CAUGHT);
+//	} RLC_FINALLY {
+		fp4_free(t0);
+		fp4_free(t1);
+		dv4_free(u0);
+		dv4_free(u1);
+		dv4_free(u2);
+		dv4_free(u3);
+		dv4_free(u4);
+//	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr_lazyr(fp12_t c, fp12_t a) {
+        dv12_t t;
+
+  //      dv12_null(t);
+
+ //       RLC_TRY {
+                dv12_new(t);
+                fp12_sqr_unr(t, a);
+                for (int i = 0; i < 3; i++) {
+                        fp2_rdcn_low(c[0][i], t[0][i]);
+                        fp2_rdcn_low(c[1][i], t[1][i]);
+                }
+//        } RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        } RLC_FINALLY {
+                dv12_free(t);
+//        }
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr(fp12_t c, fp12_t a) {
+fp12_sqr_lazyr(c, a);
+
+}
+
 __device__
 #if INLINE == 0
 __noinline__
@@ -7639,7 +7955,7 @@ __device__
 __noinline__
 #endif
 void fp12_mul(fp12_t c, fp12_t a, fp12_t b) {
-void fp12_mul_lazyr(c, a, b);
+ fp12_mul_lazyr(c, a, b);
 
 }
 
