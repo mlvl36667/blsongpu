@@ -21,6 +21,8 @@
 #define NBLOCKS 1
 #define NTHREADS 1
 
+#define RLC_TERMS               16
+
 #define EP_ENDOM
 #define EP_PRECO
 #define rlc_align               /* empty*/
@@ -6906,6 +6908,7 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 	dv2_t u0, u1;
 	int one = 1, zero = 0;
 
+ printf(" point doubling in projective coordinates... \n");
 //	fp2_null(t0);
 //	fp2_null(t1);
 //	fp2_null(t2);
@@ -7934,6 +7937,7 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 		return;
 	}
 
+ printf(" calculating the Miller loop \n");
 //	fp12_null(l);
 	fp12_new(l);
 
@@ -9035,7 +9039,7 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 		if (sign == RLC_NEG) {
 			fp12_inv_cyc(c, c);
 		}
-	}
+//	}
 //	RLC_CATCH_ANY {
 //		RLC_THROW(ERR_CAUGHT);
 //	}
@@ -9051,10 +9055,116 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp12_sqr_cyc_lazyr(fp12_t c, fp12_t a) {
+	fp2_t t0, t1, t2;
+	dv2_t u0, u1, u2, u3;
+
+//	fp2_null(t0);
+//	fp2_null(t1);
+//	fp2_null(t2);
+//	dv2_null(u0);
+//	dv2_null(u1);
+//	dv2_null(u2);
+//	dv2_null(u3);
+
+//	RLC_TRY {
+		fp2_new(t0);
+		fp2_new(t1);
+		fp2_new(t2);
+		dv2_new(u0);
+		dv2_new(u1);
+		dv2_new(u2);
+		dv2_new(u3);
+
+		fp2_sqrn_low(u2, a[0][0]);
+		fp2_sqrn_low(u3, a[1][1]);
+		fp2_addm_low(t1, a[0][0], a[1][1]);
+
+		fp2_norh_low(u0, u3);
+		fp2_addc_low(u0, u0, u2);
+		fp2_rdcn_low(t0, u0);
+
+		fp2_sqrn_low(u1, t1);
+		fp2_addc_low(u2, u2, u3);
+		fp2_subc_low(u1, u1, u2);
+		fp2_rdcn_low(t1, u1);
+
+		fp2_subm_low(c[0][0], t0, a[0][0]);
+		fp2_addm_low(c[0][0], c[0][0], c[0][0]);
+		fp2_addm_low(c[0][0], t0, c[0][0]);
+
+		fp2_addm_low(c[1][1], t1, a[1][1]);
+		fp2_addm_low(c[1][1], c[1][1], c[1][1]);
+		fp2_addm_low(c[1][1], t1, c[1][1]);
+
+		fp2_sqrn_low(u0, a[0][1]);
+		fp2_sqrn_low(u1, a[1][2]);
+		fp2_addm_low(t0, a[0][1], a[1][2]);
+		fp2_sqrn_low(u2, t0);
+
+		fp2_addc_low(u3, u0, u1);
+		fp2_subc_low(u3, u2, u3);
+		fp2_rdcn_low(t0, u3);
+
+		fp2_addm_low(t1, a[1][0], a[0][2]);
+		fp2_sqrm_low(t2, t1);
+		fp2_sqrn_low(u2, a[1][0]);
+
+		fp2_norm_low(t1, t0);
+		fp2_addm_low(t0, t1, a[1][0]);
+		fp2_addm_low(t0, t0, t0);
+		fp2_addm_low(c[1][0], t0, t1);
+
+		fp2_norh_low(u3, u1);
+		fp2_addc_low(u3, u0, u3);
+		fp2_rdcn_low(t0, u3);
+		fp2_subm_low(t1, t0, a[0][2]);
+
+		fp2_sqrn_low(u1, a[0][2]);
+
+		fp2_addm_low(t1, t1, t1);
+		fp2_addm_low(c[0][2], t1, t0);
+
+		fp2_norh_low(u3, u1);
+		fp2_addc_low(u3, u2, u3);
+		fp2_rdcn_low(t0, u3);
+		fp2_subm_low(t1, t0, a[0][1]);
+		fp2_addm_low(t1, t1, t1);
+		fp2_addm_low(c[0][1], t1, t0);
+
+		fp2_addc_low(u0, u2, u1);
+		fp2_rdcn_low(t0, u0);
+		fp2_subm_low(t0, t2, t0);
+		fp2_addm_low(t1, t0, a[1][2]);
+		fp2_dblm_low(t1, t1);
+		fp2_addm_low(c[1][2], t0, t1);
+//	} RLC_CATCH_ANY {
+//		RLC_THROW(ERR_CAUGHT);
+//	} RLC_FINALLY {
+		fp2_free(t0);
+		fp2_free(t1);
+		fp2_free(t2);
+		dv2_free(u0);
+		dv2_free(u1);
+		dv2_free(u2);
+		dv2_free(u3);
+//	}
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp12_sqr_cyc(fp12_t c, fp12_t a){
+ fp12_sqr_cyc_lazyr(c,a);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 static void pp_exp_b12(fp12_t c, fp12_t a) {
 	fp12_t t0, t1, t2, t3;
 	bn_t x;
-	const int *b;
+	int *b;
 	int l;
 
 //	fp12_null(t0);
@@ -9082,7 +9192,25 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
   x->sign = RLC_POS;
   x->dp[0] = 1;
 
-		b = fp_prime_get_par_sps(&l);
+//		b = fp_prime_get_par_sps(&l);
+                b = (int*)malloc(sizeof(int)*(RLC_TERMS + 1));
+                b[0] = 16;
+                b[1] = 48;
+                b[2] = 57;
+                b[3] = 60;
+                b[4] = -62;
+                b[5] = 64;
+                b[6] = 0;
+                b[7] = 0;
+                b[8] = 0;
+                b[9] = 0;
+                b[10] = 0;
+                b[11] = 0;
+                b[12] = 0;
+                b[13] = 0;
+                b[14] = 0;
+                b[15] = 0;
+                b[16] = 0;
 
 		/* First, compute m^(p^6 - 1)(p^2 + 1). */
 		fp12_conv_cyc(c, a);
@@ -9127,9 +9255,10 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
 		fp12_mul(t1, t1, t2);
 		fp12_frb(t2, t3, 1);
 		fp12_mul(c, t1, t2);
+                free(b);
 
 //		fp12_free(t0);
-`
+
 //		fp12_free(t1);
 //		fp12_free(t2);
 //		fp12_free(t3);
