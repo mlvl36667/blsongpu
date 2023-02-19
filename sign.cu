@@ -6008,51 +6008,30 @@ __noinline__
 static void ep_norm_imp(ep_t r, const ep_t p, int inv) {
  fp_t t;
  
-// printf("1. ep_norm_imp \n");
  if (p->coord != BASIC) {
-// printf("2. ep_norm_imp \n");
   t = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-// printf("3. ep_norm_imp \n");
   if (inv) {
-// printf("4. ep_norm_imp \n");
    fp_copy(r->z, p->z);
-// printf("5. ep_norm_imp \n");
   } else {
-// printf("6. ep_norm_imp \n");
    fp_inv(r->z, p->z);
-// printf("7. ep_norm_imp \n");
   }
-// printf("8. ep_norm_imp \n");
   switch (p->coord) {
    case PROJC:
-// printf("9. ep_norm_imp \n");
     fp_mul(r->x, p->x, r->z);
-// printf("10. ep_norm_imp \n");
     fp_mul(r->y, p->y, r->z);
-// printf("11. ep_norm_imp \n");
     break;
    case JACOB:
-// printf("12. ep_norm_imp \n");
     fp_sqr(t, r->z);
-// printf("13. ep_norm_imp \n");
     fp_mul(r->x, p->x, t);
-// printf("14. ep_norm_imp \n");
     fp_mul(t, t, r->z);
-// printf("15. ep_norm_imp \n");
     fp_mul(r->y, p->y, t);
-// printf("16. ep_norm_imp \n");
     free(t);
-// printf("17. ep_norm_imp \n");
     break;
    default:
-// printf("18. ep_norm_imp \n");
     ep_copy(r, p);
-// printf("19. ep_norm_imp \n");
     break;
    }
-// printf("20. ep_norm_imp \n");
   fp_set_dig(r->z, 1);
-// printf("21. ep_norm_imp \n");
  }
  r->coord = BASIC;
 }
@@ -7929,6 +7908,12 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
         ep_t *_p = (ep_t*) malloc((m) * sizeof(ep_st));
         ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep2_st));
 
+        if(_p == NULL){
+ printf(" 1. no memory left in pp_mil_k12... \n");
+        }
+        if(_q == NULL){
+ printf(" 2. no memory left in pp_mil_k12... \n");
+        }
 	int i, j, len = bn_bits(a) + 1;
 
 	int8_t s[RLC_FP_BITS + 1];
@@ -9281,8 +9266,8 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
  q = (ep2_t*) malloc((m) * sizeof(ep2_t));
 
  ep_t  *_p = (ep_t*) malloc((m) * sizeof(ep_t));
- ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep_t));
- ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep_t));
+ ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep2_t));
+ ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep2_t));
 
  bn_t a;
 
@@ -9298,6 +9283,16 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   a->sign = RLC_NEG;
   a->dp[0] = 15132376222941642752;
   bn_print(a);
+
+ printf(" pointer init...\n");
+  for (i = 0; i < m; i++) {
+   ep_new(_p[i]);
+   ep2_new(_q[i]);
+   ep2_new(t[i]);
+  }
+
+
+ printf(" normalisation...\n");
   j = 0;
   for (i = 0; i < m; i++) {
    if (!ep_is_infty(p[i]) && !ep2_is_infty(q[i])) {
@@ -9307,6 +9302,7 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   }
 
   fp12_set_dig(r, 1);
+ printf(" Miller loop...\n");
   /* r = f_{|a|,Q}(P). */
   pp_mil_k12(r, t, _q, _p, j, a);
   if (bn_sign(a) == RLC_NEG) {
@@ -9537,12 +9533,26 @@ void runbls(uint8_t *prime, uint64_t *prime2)
   pp = (ep_st*) malloc(sizeof(ep_st));
 
   ep_mul_gen(pp, x);
+  printf("Public key: \n");
+  ep_print(pp);
 
   free(pp);
   ep_t *ppp; 
   ep2_t *qq;
+
   fp12_t rrr;
-  pp_map_sim_oatep_k12(rrr, ppp,qq,2);
+  fp12_new(rrr);
+
+  int m = 2;
+  ppp = (ep_t*) malloc((m) * sizeof(ep_t));
+  qq = (ep2_t*) malloc((m) * sizeof(ep2_t));
+
+  for (int i = 0; i < m; i++) {
+   ep_new(ppp[i]);
+   ep2_new(qq[i]);
+  }
+
+  pp_map_sim_oatep_k12(rrr, ppp, qq, m);
 
 
 // És a publikus kulccsal, az üzenettel és az aláírással lehet hitelesíteni
