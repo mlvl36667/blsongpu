@@ -6713,9 +6713,8 @@ __device__
 __noinline__
 #endif
 void dv12_free(dv12_t c) {
-                dv12_free(c[0]);
-                dv12_free(c[1]);
-                dv12_free(c[2]);
+                dv6_free(c[0]);
+                dv6_free(c[1]);
 }
 __device__
 #if INLINE == 0
@@ -7572,22 +7571,24 @@ __device__
 __noinline__
 #endif
 void ep_new(ep_t p){
-  p = (ep_t*) malloc(sizeof(ep_t));
-  if(p == NULL){
-   printf("1. no memory left in ep_new...\n");
-  }
-  p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-  if(p->x == NULL){
-   printf("2. no memory left in ep_new...\n");
-  }
-  p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-  if(p->y == NULL){
-   printf("3. no memory left in ep_new...\n");
-  }
-  p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
-  if(p->z == NULL){
-   printf("4. no memory left in ep_new...\n");
-  }
+//  p = (ep_t*) malloc(sizeof(ep_t));
+  p = (ep_t) malloc(sizeof(ep_st));
+
+//   if(p == NULL){
+//    printf("1. no memory left in ep_new...\n");
+//   }
+//   p->x = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+//   if(p->x == NULL){
+//    printf("2. no memory left in ep_new...\n");
+//   }
+//   p->y = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+//   if(p->y == NULL){
+//    printf("3. no memory left in ep_new...\n");
+//   }
+//   p->z = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+//   if(p->z == NULL){
+//    printf("4. no memory left in ep_new...\n");
+//   }
 }
 __device__
 #if INLINE == 0
@@ -7617,7 +7618,7 @@ __device__
 __noinline__
 #endif
 void ep2_new(ep2_t p){
-  p = (ep2_t*) malloc(sizeof(ep2_t));
+  p = (ep2_t) malloc(sizeof(ep2_st));
   if(p == NULL){
    printf("1. no memory left in ep2_new...\n");
   }
@@ -7915,7 +7916,6 @@ void fp12_sqr(fp12_t c, fp12_t a) {
 fp12_sqr_lazyr(c, a);
 
 }
-
 __device__
 #if INLINE == 0
 __noinline__
@@ -7923,8 +7923,8 @@ __noinline__
 static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 	fp12_t l;
 
-        ep_t _p = (ep_t*) malloc((m) * sizeof(ep_t));
-        ep2_t _q = (ep2_t*) malloc((m) * sizeof(ep2_t));
+        ep_t *_p = (ep_t*) malloc((m) * sizeof(ep_st));
+        ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep2_st));
 
 	int i, j, len = bn_bits(a) + 1;
 
@@ -8350,7 +8350,14 @@ void fp12_frb(fp12_t c, fp12_t a, int i) {
                 fp2_mul_frb(c[1][2], c[1][2], 1, 5);
         }
 }
-
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp2_dblm_low(fp2_t c, fp2_t a) {
+        fp_dblm_low(c[0], a[0]);
+        fp_dblm_low(c[1], a[1]);
+}
 __device__
 #if INLINE == 0
 __noinline__
@@ -8488,6 +8495,13 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp2_mul_nor(fp2_t c, fp2_t a){
+ fp2_mul_nor_basic(c,a);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp6_mul_art(fp6_t c, fp6_t a) {
         fp2_t t0;
 
@@ -8506,6 +8520,105 @@ void fp6_mul_art(fp6_t c, fp6_t a) {
 //        } RLC_FINALLY {
                 fp2_free(t0);
 //        }
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_sub(fp6_t c, fp6_t a, fp6_t b) {
+        fp2_sub(c[0], a[0], b[0]);
+        fp2_sub(c[1], a[1], b[1]);
+        fp2_sub(c[2], a[2], b[2]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_inv(fp6_t c, fp6_t a) {
+        fp2_t v0;
+        fp2_t v1;
+        fp2_t v2;
+        fp2_t t0;
+
+//        fp2_null(v0);
+//        fp2_null(v1);
+//        fp2_null(v2);
+//        fp2_null(t0);
+
+//        RLC_TRY {
+                fp2_new(v0);
+                fp2_new(v1);
+                fp2_new(v2);
+                fp2_new(t0);
+
+                /* v0 = a_0^2 - E * a_1 * a_2. */
+                fp2_sqr(t0, a[0]);
+                fp2_mul(v0, a[1], a[2]);
+                fp2_mul_nor(v2, v0);
+                fp2_sub(v0, t0, v2);
+
+                /* v1 = E * a_2^2 - a_0 * a_1. */
+                fp2_sqr(t0, a[2]);
+                fp2_mul_nor(v2, t0);
+                fp2_mul(v1, a[0], a[1]);
+                fp2_sub(v1, v2, v1);
+
+                /* v2 = a_1^2 - a_0 * a_2. */
+                fp2_sqr(t0, a[1]);
+                fp2_mul(v2, a[0], a[2]);
+                fp2_sub(v2, t0, v2);
+
+                fp2_mul(t0, a[1], v2);
+                fp2_mul_nor(c[1], t0);
+
+                fp2_mul(c[0], a[0], v0);
+
+                fp2_mul(t0, a[2], v1);
+                fp2_mul_nor(c[2], t0);
+
+                fp2_add(t0, c[0], c[1]);
+                fp2_add(t0, t0, c[2]);
+                fp2_inv(t0, t0);
+
+                fp2_mul(c[0], v0, t0);
+                fp2_mul(c[1], v1, t0);
+                fp2_mul(c[2], v2, t0);
+//        } RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        } RLC_FINALLY {
+                fp2_free(v0);
+                fp2_free(v1);
+                fp2_free(v2);
+                fp2_free(t0);
+//        }
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_mul_lazyr(fp6_t c, fp6_t a, fp6_t b){
+        dv6_t t;
+
+//        dv6_null(t);
+
+//        RLC_TRY {
+                dv6_new(t);
+                fp6_mul_unr(t, a, b);
+                fp2_rdcn_low(c[0], t[0]);
+                fp2_rdcn_low(c[1], t[1]);
+                fp2_rdcn_low(c[2], t[2]);
+//        } RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        } RLC_FINALLY {
+                dv6_free(t);
+//        }
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void fp6_mul(fp6_t c, fp6_t a, fp6_t b){
+ fp6_mul_lazyr(c,a,b);
 }
 
 __device__
@@ -8569,15 +8682,6 @@ void fp12_conv_cyc(fp12_t c, fp12_t a) {
 }
 
 
-__device__
-#if INLINE == 0
-__noinline__
-#endif
-
-void fp2_dblm_low(fp2_t c, fp2_t a) {
-        fp_dblm_low(c[0], a[0]);
-        fp_dblm_low(c[1], a[1]);
-}
 __device__
 #if INLINE == 0
 __noinline__
@@ -8733,8 +8837,58 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp2_inv_sim(fp2_t *c, fp2_t *a, int n) {
+        int i;
+        fp2_t u, *t = (fp2_t*) malloc(sizeof(fp2_t)*n);
+//        fp2_t u, *t = RLC_ALLOCA(fp2_t, n);
+
+        for (i = 0; i < n; i++) {
+                fp2_null(t[i]);
+        }
+        fp2_null(u);
+
+//        RLC_TRY {
+                for (i = 0; i < n; i++) {
+                        fp2_new(t[i]);
+                }
+                fp2_new(u);
+
+                fp2_copy(c[0], a[0]);
+                fp2_copy(t[0], a[0]);
+
+                for (i = 1; i < n; i++) {
+                        fp2_copy(t[i], a[i]);
+                        fp2_mul(c[i], c[i - 1], t[i]);
+                }
+
+                fp2_inv(u, c[n - 1]);
+
+                for (i = n - 1; i > 0; i--) {
+                        fp2_mul(c[i], c[i - 1], u);
+                        fp2_mul(u, u, t[i]);
+                }
+                fp2_copy(c[0], u);
+//        }
+//        RLC_CATCH_ANY {
+//                RLC_THROW(ERR_CAUGHT);
+//        }
+//        RLC_FINALLY {
+                for (i = 0; i < n; i++) {
+                        fp2_free(t[i]);
+                }
+                fp2_free(u);
+//                RLC_FREE(t);
+        free(t);
+//        }
+}
+
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp12_back_cyc_sim(fp12_t c[], fp12_t a[], int n) {
-    fp2_t *t  =  (fp2_t) malloc(sizeof(fp2_t)*n*3);
+    fp2_t *t  =  (fp2_t*) malloc(sizeof(fp2_t)*n*3);
+    fp2_t
         *t0 = t + 0 * n,
         *t1 = t + 1 * n,
         *t2 = t + 2 * n;
@@ -8816,7 +8970,7 @@ __noinline__
 #endif
 void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 	int i, j, k, w = len;
-    fp12_t t, *u = (fp12_t)malloc(sizeof(fp12_t)*w); 
+        fp12_t t, *u = (fp12_t*)malloc(sizeof(fp12_t)*w); 
 
 	if (len == 0) {
 //		RLC_FREE(u);
@@ -8824,7 +8978,7 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 		return;
 	}
 
-	fp12_null(t);
+//	fp12_null(t);
 
 //	RLC_TRY {
 		if (u == NULL) {
@@ -8832,7 +8986,7 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
  printf(" no memory in fp12_exp_cyc_sps...\n");
 		}
 		for (i = 0; i < w; i++) {
-			fp12_null(u[i]);
+//			fp12_null(u[i]);
 			fp12_new(u[i]);
 		}
 		fp12_new(t);
@@ -8993,20 +9147,20 @@ __device__
 __noinline__
 #endif
 void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
-//void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
+ int i, j;
+ p = (ep_t*) malloc((m) * sizeof(ep_t));
+ q = (ep2_t*) malloc((m) * sizeof(ep2_t));
+
+ ep_t  *_p = (ep_t*) malloc((m) * sizeof(ep_t));
+ ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep_t));
+ ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep_t));
+
+ bn_t a;
+
  printf(" Calculating pairing...\n");
-
-        p = (ep_t*) malloc((m) * sizeof(ep_t));
-        q = (ep2_t*) malloc((m) * sizeof(ep2_t));
-
-        ep_t  *_p = (ep_t*) malloc((m) * sizeof(ep_t));
-        ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep_t));
-        ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep_t));
-
-        if (_p == NULL || _q == NULL || t == NULL) {
-         printf(" No memory in pp_map_sim_oatep_k12...\n");
-        }
-        bn_t a;
+ if (_p == NULL || _q == NULL || t == NULL) {
+  printf(" No memory in pp_map_sim_oatep_k12...\n");
+ }
 
   a = (bn_t ) malloc(sizeof(bn_st));
   a->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
@@ -9015,15 +9169,13 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   a->sign = RLC_NEG;
   a->dp[0] = 15132376222941642752;
   bn_print(a);
-
-        int i, j;
-        j = 0;
-        for (i = 0; i < m; i++) {
-         if (!ep_is_infty(p[i]) && !ep2_is_infty(q[i])) {
-          ep_norm(_p[j], p[i]);
-          ep2_norm(_q[j++], q[i]);
-         }
-        }
+  j = 0;
+  for (i = 0; i < m; i++) {
+   if (!ep_is_infty(p[i]) && !ep2_is_infty(q[i])) {
+    ep_norm(_p[j], p[i]);
+    ep2_norm(_q[j++], q[i]);
+   }
+  }
 
   fp12_set_dig(r, 1);
   /* r = f_{|a|,Q}(P). */
@@ -9040,10 +9192,6 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   free(t);
   free(a->dp);
   free(a);
-
-
-        
-
 }
 __device__
 #if INLINE == 0
