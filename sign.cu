@@ -1,5 +1,5 @@
 // compile with nime nvcc -o sign sign.cu  -rdc=false -Xptxas -v  -O0  -lineinfo --ptxas-options=-O0
-// /usr/bin/c++ -DSODIUM_STATIC -I/home/urllc2/bls-signatures/src -I/home/urllc2/bls-signatures/build/_deps/relic-src/include -I/home/urllc2/bls-signatures/build/_deps/relic-build/include -I/home/urllc2/bls-signatures/build/_deps/sodium-src/libsodium/src/libsodium/include -O3 -DNDEBUG -fPIE -std=gnu++17 -MD -MT main.cpp.o -MF main.cpp.o.d -o main.cpp.o -c main.cpp; /usr/bin/c++ -O3 -DNDEBUG main.cpp.o -o runmain  /home/urllc2/bls-signatures/build/src/libbls.a /home/urllc2/bls-signatures/build/_deps/relic-build/lib/librelic_s.a /usr/lib/x86_64-linux-gnu/libgmp.so -lrt -lpthread -lm /home/urllc2/bls-signatures/build/_deps/sodium-build/libsodium.a
+// /usr/bin/c++ -DSODIUM_STATIC -I/home/c/bls-signatures/src -I/home/c/bls-signatures/build/_deps/relic-src/include -I/home/c/bls-signatures/build/_deps/relic-build/include -I/home/c/bls-signatures/build/_deps/sodium-src/libsodium/src/libsodium/include -O3 -DNDEBUG -fPIE -std=gnu++17 -MD -MT main.cpp.o -MF main.cpp.o.d -o main.cpp.o -c main.cpp; /usr/bin/c++ -O3 -DNDEBUG main.cpp.o -o runmain  /home/c/bls-signatures/build/src/libbls.a /home/c/bls-signatures/build/_deps/relic-build/lib/librelic_s.a /usr/lib/x86_64-linux-gnu/libgmp.so -lrt -lpthread -lm /home/c/bls-signatures/build/_deps/sodium-build/libsodium.a
 //  sudo apt-get purge nvidia*
 //  sudo apt-get autoremove
 //  sudo reboot
@@ -9262,8 +9262,6 @@ __noinline__
 #endif
 void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
  int i, j;
- p = (ep_t*) malloc((m) * sizeof(ep_t));
- q = (ep2_t*) malloc((m) * sizeof(ep2_t));
 
  ep_t  *_p = (ep_t*) malloc((m) * sizeof(ep_t));
  ep2_t *t  = (ep2_t*) malloc((m) * sizeof(ep2_t));
@@ -9293,6 +9291,8 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
 
 
  printf(" normalisation...\n");
+ printf(" q: \n");
+ ep2_print(q[1]);
   j = 0;
   for (i = 0; i < m; i++) {
    if (!ep_is_infty(p[i]) && !ep2_is_infty(q[i])) {
@@ -9375,7 +9375,7 @@ void runbls(uint8_t *prime, uint64_t *prime2)
  bn_t e, e2;
    uint8_t  idx0;
    uint8_t  idx1;
-   ep2_t p;
+   ep2_t p,qqq;
    ep2_t q;
    bn_t x;
 
@@ -9549,9 +9549,35 @@ void runbls(uint8_t *prime, uint64_t *prime2)
 
   for (int i = 0; i < m; i++) {
    ep_new(ppp[i]);
-   ep2_new(qq[i]);
+//   ep2_new(qq[i]);
   }
 
+  ppp[0] = (ep_t)malloc(sizeof(ep_st));
+
+  ppp[1] = (ep_t)malloc(sizeof(ep_st));
+
+
+  qq[0] = (ep2_t)malloc(sizeof(ep2_st));
+  qq[0]->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[0]->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  qq[0]->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[0]->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  qq[0]->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[0]->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  qq[1] = (ep2_t)malloc(sizeof(ep2_st));
+  qq[1]->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[1]->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  qq[1]->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[1]->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  qq[1]->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  qq[1]->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  ep2_copy(qq[1],p);
   pp_map_sim_oatep_k12(rrr, ppp, qq, m);
 
 
@@ -9560,6 +9586,7 @@ void runbls(uint8_t *prime, uint64_t *prime2)
 
 ////////////////////////////////////////////////////////////
 
+  free(p);
   free(x->dp);
   free(x);
 
