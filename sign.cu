@@ -6898,7 +6898,6 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 	dv2_t u0, u1;
 	int one = 1, zero = 0;
 
- printf(" point doubling in projective coordinates... \n");
 //	fp2_null(t0);
 //	fp2_null(t1);
 //	fp2_null(t2);
@@ -7088,7 +7087,7 @@ __noinline__
 void fp2_nord_low(dv2_t c, dv2_t a) {
 	dv2_t t;
 
-	dv2_null(t);
+//	dv2_null(t);
 
 //	RLC_TRY {
 		dv2_new(t);
@@ -7783,7 +7782,7 @@ void fp12_sqr_unr(dv12_t c, fp12_t a) {
 	fp4_t t0, t1;
 	dv4_t u0, u1, u2, u3, u4;
 
- printf(" fp12_sqr_unr called...\n");
+// printf(" fp12_sqr_unr called...\n");
 //	fp4_null(t0);
 //	fp4_null(t1);
 //	dv4_null(u0);
@@ -7871,7 +7870,6 @@ void fp12_sqr_unr(dv12_t c, fp12_t a) {
 		fp2_addc_low(c[0][0], u0[0], u4[1]);
 		fp2_addc_low(c[1][1], u0[1], u1[0]);
 //	} RLC_CATCH_ANY {
- printf(" fp12_sqr_unr leaving...\n");
 //		RLC_THROW(ERR_CAUGHT);
 //	} RLC_FINALLY {
 		fp4_free(t0);
@@ -7976,16 +7974,10 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 
 //		fp12_zero(l);
 		bn_rec_naf(s, &len, a, 2);
- printf(" len: %d \n",len);
- printf(" s[len - 2]: \n");
- printf(" s[len - 2]: %d \n",s[len - 2]);
 		pp_dbl_k12(r, t[0], t[0], _p[0]);
 		for (j = 1; j < m; j++) {
- printf(" 1. j: %d \n",j);
 			pp_dbl_k12(l, t[j], t[j], _p[j]);
- printf(" pp_dbl_k12 finished \n");
 			fp12_mul_dxs(r, r, l);
- printf(" outside \n");
 		}
 		if (s[len - 2] > 0) {
 			for (j = 0; j < m; j++) {
@@ -8001,16 +7993,10 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 		}
 
 		for (i = len - 3; i >= 0; i--) {
- printf(" fp12_sqr called ... \n");
 			fp12_sqr(r, r);
- printf(" fp12_sqr done ... \n");
 			for (j = 0; j < m; j++) {
- printf(" pp_dbl_k12 called ... \n");
 				pp_dbl_k12(l, t[j], t[j], _p[j]);
- printf(" pp_dbl_k12 done ... \n");
- printf(" fp12_mul_dxs called ... \n");
 				fp12_mul_dxs(r, r, l);
- printf(" fp12_mul_dxs done ... \n");
 				if (s[i] > 0) {
 					pp_add_k12(l, t[j], q[j], p[j]);
 					fp12_mul_dxs(r, r, l);
