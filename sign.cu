@@ -7053,7 +7053,6 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //		fp2_free(t6);
 //		dv2_free(u0);
 //		dv2_free(u1);
- printf(" point doubling done ...\n");
 }
 __device__
 #if INLINE == 0
@@ -7478,7 +7477,6 @@ void pp_add_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 	dv2_t u0, u1;
 	int one = 1, zero = 0;
 
- printf(" now in pp_add_k12_projc_lazyr... \n");
 //	fp2_null(t0);
 //	fp2_null(t1);
 //	fp2_null(t2);
@@ -8009,10 +8007,11 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 		}
  printf(" cleaning mem... \n");
 		fp12_free(l);
-		for (j = 0; j < m; j++) {
-			ep_free(_p[j]);
-			ep2_free(_q[j]);
-		}
+//		for (j = 0; j < m; j++) {
+//			ep_free(_p[j]);
+//			ep2_free(_q[j]);
+//		}
+ printf(" returning... \n");
 }
 __device__
 #if INLINE == 0
@@ -8997,18 +8996,21 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 
 //	fp12_null(t);
 
+ printf("2. fp12_exp_cyc_sps \n");
 //	RLC_TRY {
 		if (u == NULL) {
-			
- printf(" no memory in fp12_exp_cyc_sps...\n");
+                 printf(" no memory in fp12_exp_cyc_sps...\n");
 		}
 		for (i = 0; i < w; i++) {
 //			fp12_null(u[i]);
 			fp12_new(u[i]);
 		}
+ printf("3. fp12_exp_cyc_sps \n");
 		fp12_new(t);
+ printf("4. fp12_exp_cyc_sps \n");
 
 		fp12_copy(t, a);
+ printf("5. fp12_exp_cyc_sps \n");
 		if (b[0] == 0) {
 			for (j = 0, i = 1; i < len; i++) {
 				k = (b[i] < 0 ? -b[i] : b[i]);
@@ -9030,28 +9032,41 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 			}
 		} else {
 			for (j = 0, i = 0; i < len; i++) {
+ printf("6. fp12_exp_cyc_sps \n");
 				k = (b[i] < 0 ? -b[i] : b[i]);
 				for (; j < k; j++) {
+ printf("7. fp12_exp_cyc_sps \n");
 					fp12_sqr_pck(t, t);
+ printf("8. fp12_exp_cyc_sps \n");
 				}
 				if (b[i] < 0) {
+ printf("9. fp12_exp_cyc_sps \n");
 					fp12_inv_cyc(u[i], t);
+ printf("10. fp12_exp_cyc_sps \n");
 				} else {
+ printf("11. fp12_exp_cyc_sps \n");
 					fp12_copy(u[i], t);
+ printf("12. fp12_exp_cyc_sps \n");
 				}
 			}
+ printf("13. fp12_exp_cyc_sps \n");
 
 			fp12_back_cyc_sim(u, u, w);
+ printf("14. fp12_exp_cyc_sps \n");
 
 			fp12_copy(c, u[0]);
+ printf("15. fp12_exp_cyc_sps \n");
 			for (i = 1; i < w; i++) {
+ printf("16. fp12_exp_cyc_sps \n");
 				fp12_mul(c, c, u[i]);
+ printf("17. fp12_exp_cyc_sps \n");
 			}
 		}
 
 		if (sign == RLC_NEG) {
 			fp12_inv_cyc(c, c);
 		}
+ printf("18. fp12_exp_cyc_sps \n");
 //	}
 //	RLC_CATCH_ANY {
 //		RLC_THROW(ERR_CAUGHT);
@@ -9186,10 +9201,11 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
 //	fp12_null(t3);
 //	bn_null(x);
 //
-//		fp12_new(t0);
-//		fp12_new(t1);
-//		fp12_new(t2);
-//		fp12_new(t3);
+ printf(" Final exponentiation...\n");
+		fp12_new(t0);
+		fp12_new(t1);
+		fp12_new(t2);
+		fp12_new(t3);
 //		bn_new(x);
 
 		/*
@@ -9206,6 +9222,7 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
   x->dp[0] = 1;
 
 //		b = fp_prime_get_par_sps(&l);
+                l = 6;
                 b = (int*)malloc(sizeof(int)*(RLC_TERMS + 1));
                 b[0] = 16;
                 b[1] = 48;
