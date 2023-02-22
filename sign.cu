@@ -6909,15 +6909,15 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //	dv2_null(u0);
 //	dv2_null(u1);
 
-//		fp2_new(t0);
-//		fp2_new(t1);
-//		fp2_new(t2);
-//		fp2_new(t3);
-//		fp2_new(t4);
-//		fp2_new(t5);
-//		fp2_new(t6);
-//		dv2_new(u0);
-//		dv2_new(u1);
+		fp2_new(t0);
+		fp2_new(t1);
+		fp2_new(t2);
+		fp2_new(t3);
+		fp2_new(t4);
+		fp2_new(t5);
+		fp2_new(t6);
+		dv2_new(u0);
+		dv2_new(u1);
 
 //		if (ep2_curve_is_twist() == RLC_EP_MTYPE) {
 			one ^= 1;
@@ -7054,6 +7054,7 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //		fp2_free(t6);
 //		dv2_free(u0);
 //		dv2_free(u1);
+ printf(" point doubling done ...\n");
 }
 __device__
 #if INLINE == 0
@@ -7151,7 +7152,7 @@ void fp2_norh_low(dv2_t c, dv2_t a) {
 //#ifdef FP_QNRES
         dv2_t t;
 
-        dv2_null(t);
+//        dv2_null(t);
 
 //        RLC_TRY {
                 dv2_new(t);
@@ -7478,6 +7479,7 @@ void pp_add_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 	dv2_t u0, u1;
 	int one = 1, zero = 0;
 
+ printf(" now in pp_add_k12_projc_lazyr... \n");
 //	fp2_null(t0);
 //	fp2_null(t1);
 //	fp2_null(t2);
@@ -7781,6 +7783,7 @@ void fp12_sqr_unr(dv12_t c, fp12_t a) {
 	fp4_t t0, t1;
 	dv4_t u0, u1, u2, u3, u4;
 
+ printf(" fp12_sqr_unr called...\n");
 //	fp4_null(t0);
 //	fp4_null(t1);
 //	dv4_null(u0);
@@ -7868,6 +7871,7 @@ void fp12_sqr_unr(dv12_t c, fp12_t a) {
 		fp2_addc_low(c[0][0], u0[0], u4[1]);
 		fp2_addc_low(c[1][1], u0[1], u1[0]);
 //	} RLC_CATCH_ANY {
+ printf(" fp12_sqr_unr leaving...\n");
 //		RLC_THROW(ERR_CAUGHT);
 //	} RLC_FINALLY {
 		fp4_free(t0);
@@ -7920,10 +7924,10 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
         ep2_t *_q = (ep2_t*) malloc((m) * sizeof(ep2_st));
 
         if(_p == NULL){
- printf(" 1. no memory left in pp_mil_k12... \n");
+         printf(" 1. no memory left in pp_mil_k12... \n");
         }
         if(_q == NULL){
- printf(" 2. no memory left in pp_mil_k12... \n");
+         printf(" 2. no memory left in pp_mil_k12... \n");
         }
 	int i, j, len = bn_bits(a) + 1;
 
@@ -7933,18 +7937,32 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 		return;
 	}
 
- printf(" calculating the Miller loop \n");
+        printf(" calculating the Miller loop \n");
 //	fp12_null(l);
 	fp12_new(l);
 
 		if (_p == NULL || _q == NULL) {
- printf(" No memory left in pp_mil_k12 \n");
+                 printf(" No memory left in pp_mil_k12 \n");
 		}
 		for (j = 0; j < m; j++) {
 //			ep_null(_p[j]);
 //			ep2_null(_q[j]);
-			ep_new(_p[j]);
-			ep2_new(_q[j]);
+
+//			ep_new(_p[j]);
+//			ep2_new(_q[j]);
+
+  _p[j] = (ep_t)malloc(sizeof(ep_st));
+  _q[j] = (ep2_t)malloc(sizeof(ep2_st));
+  _q[j]->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  _q[j]->x[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  _q[j]->y[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  _q[j]->y[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  _q[j]->z[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  _q[j]->z[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+
 			ep2_copy(t[j], q[j]);
 			ep2_neg(_q[j], q[j]);
 #if EP_ADD == BASIC
@@ -7958,10 +7976,16 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 
 //		fp12_zero(l);
 		bn_rec_naf(s, &len, a, 2);
+ printf(" len: %d \n",len);
+ printf(" s[len - 2]: \n");
+ printf(" s[len - 2]: %d \n",s[len - 2]);
 		pp_dbl_k12(r, t[0], t[0], _p[0]);
 		for (j = 1; j < m; j++) {
+ printf(" 1. j: %d \n",j);
 			pp_dbl_k12(l, t[j], t[j], _p[j]);
+ printf(" pp_dbl_k12 finished \n");
 			fp12_mul_dxs(r, r, l);
+ printf(" outside \n");
 		}
 		if (s[len - 2] > 0) {
 			for (j = 0; j < m; j++) {
@@ -7977,10 +8001,16 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 		}
 
 		for (i = len - 3; i >= 0; i--) {
+ printf(" fp12_sqr called ... \n");
 			fp12_sqr(r, r);
+ printf(" fp12_sqr done ... \n");
 			for (j = 0; j < m; j++) {
+ printf(" pp_dbl_k12 called ... \n");
 				pp_dbl_k12(l, t[j], t[j], _p[j]);
+ printf(" pp_dbl_k12 done ... \n");
+ printf(" fp12_mul_dxs called ... \n");
 				fp12_mul_dxs(r, r, l);
+ printf(" fp12_mul_dxs done ... \n");
 				if (s[i] > 0) {
 					pp_add_k12(l, t[j], q[j], p[j]);
 					fp12_mul_dxs(r, r, l);
@@ -7991,6 +8021,7 @@ static void pp_mil_k12(fp12_t r, ep2_t *t, ep2_t *q, ep_t *p, int m, bn_t a) {
 				}
 			}
 		}
+ printf(" cleaning mem... \n");
 		fp12_free(l);
 		for (j = 0; j < m; j++) {
 			ep_free(_p[j]);
@@ -9358,7 +9389,7 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   }
 
   fp12_set_dig(r, 1);
- printf(" Miller loop...\n");
+  printf(" Miller loop...\n");
   /* r = f_{|a|,Q}(P). */
   pp_mil_k12(r, t, _q, _p, j, a);
   if (bn_sign(a) == RLC_NEG) {
