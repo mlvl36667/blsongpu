@@ -3071,6 +3071,24 @@ __device__
 #if INLINE == 0
 __noinline__
 #endif
+void fp12_print(fp12_t a) {
+        fp_print(a[0][0][0]);
+        fp_print(a[0][0][1]);
+        fp_print(a[0][1][0]);
+        fp_print(a[0][1][1]);
+        fp_print(a[0][2][0]);
+        fp_print(a[0][2][1]);
+        fp_print(a[1][0][0]);
+        fp_print(a[1][0][1]);
+        fp_print(a[1][1][0]);
+        fp_print(a[1][1][1]);
+        fp_print(a[1][2][0]);
+        fp_print(a[1][2][1]);
+}
+__device__
+#if INLINE == 0
+__noinline__
+#endif
 void fp2_mul_basic(fp2_t c, fp2_t a, fp2_t b) {
 	dv_t t0, t1, t2, t3, t4;
 
@@ -8345,8 +8363,17 @@ __noinline__
 #endif
 
 void fp12_copy(fp12_t c, fp12_t a) {
+ printf(" fp12_copy called \n");
+ if(c == NULL){
+  printf(" invalid c in fp12_copy \n");
+ }
+ printf(" a: \n");
+ fp12_print(a);
+ printf(" c: \n");
+ fp12_print(c);
         fp6_copy(c[0], a[0]);
         fp6_copy(c[1], a[1]);
+ printf(" fp12_copy returning \n");
 }
 
 __device__
@@ -8996,21 +9023,35 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 
 //	fp12_null(t);
 
- printf("2. fp12_exp_cyc_sps \n");
+        printf("2. fp12_exp_cyc_sps \n");
 //	RLC_TRY {
 		if (u == NULL) {
                  printf(" no memory in fp12_exp_cyc_sps...\n");
 		}
 		for (i = 0; i < w; i++) {
 //			fp12_null(u[i]);
-			fp12_new(u[i]);
+//			fp12_new(u[i]);
+
+  u[i][0][0][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][0][0][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][0][1][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][0][1][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][0][2][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][0][2][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+
+  u[i][1][0][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][1][0][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][1][1][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][1][1][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][1][2][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
+  u[i][1][2][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
 		}
- printf("3. fp12_exp_cyc_sps \n");
+// printf("3. fp12_exp_cyc_sps \n");
 		fp12_new(t);
- printf("4. fp12_exp_cyc_sps \n");
+// printf("4. fp12_exp_cyc_sps \n");
 
 		fp12_copy(t, a);
- printf("5. fp12_exp_cyc_sps \n");
+// printf("5. fp12_exp_cyc_sps \n");
 		if (b[0] == 0) {
 			for (j = 0, i = 1; i < len; i++) {
 				k = (b[i] < 0 ? -b[i] : b[i]);
@@ -9032,34 +9073,35 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 			}
 		} else {
 			for (j = 0, i = 0; i < len; i++) {
- printf("6. fp12_exp_cyc_sps \n");
+// printf("6. fp12_exp_cyc_sps \n");
 				k = (b[i] < 0 ? -b[i] : b[i]);
 				for (; j < k; j++) {
- printf("7. fp12_exp_cyc_sps \n");
+// printf("7. fp12_exp_cyc_sps \n");
 					fp12_sqr_pck(t, t);
- printf("8. fp12_exp_cyc_sps \n");
+// printf("8. fp12_exp_cyc_sps \n");
 				}
 				if (b[i] < 0) {
- printf("9. fp12_exp_cyc_sps \n");
+// printf("9. fp12_exp_cyc_sps \n");
 					fp12_inv_cyc(u[i], t);
- printf("10. fp12_exp_cyc_sps \n");
+// printf("10. fp12_exp_cyc_sps \n");
 				} else {
  printf("11. fp12_exp_cyc_sps \n");
+ printf("i: %d \n",i);
 					fp12_copy(u[i], t);
  printf("12. fp12_exp_cyc_sps \n");
 				}
 			}
- printf("13. fp12_exp_cyc_sps \n");
+// printf("13. fp12_exp_cyc_sps \n");
 
 			fp12_back_cyc_sim(u, u, w);
- printf("14. fp12_exp_cyc_sps \n");
+// printf("14. fp12_exp_cyc_sps \n");
 
 			fp12_copy(c, u[0]);
- printf("15. fp12_exp_cyc_sps \n");
+// printf("15. fp12_exp_cyc_sps \n");
 			for (i = 1; i < w; i++) {
- printf("16. fp12_exp_cyc_sps \n");
+// printf("16. fp12_exp_cyc_sps \n");
 				fp12_mul(c, c, u[i]);
- printf("17. fp12_exp_cyc_sps \n");
+// printf("17. fp12_exp_cyc_sps \n");
 			}
 		}
 
