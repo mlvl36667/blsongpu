@@ -9465,6 +9465,8 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
    fp12_inv_cyc(r, r);
   }
   pp_exp_k12(r, r);
+ printf(" Result: \n");
+ fp12_print(r);
 
   free(p);
   free(q);
