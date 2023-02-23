@@ -9018,7 +9018,6 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 
 //	fp12_null(t);
 
- printf("len: %d \n",len);
 //	RLC_TRY {
 		if (u == NULL) {
                  printf(" no memory in fp12_exp_cyc_sps...\n");
