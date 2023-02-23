@@ -8363,17 +8363,11 @@ __noinline__
 #endif
 
 void fp12_copy(fp12_t c, fp12_t a) {
- printf(" fp12_copy called \n");
  if(c == NULL){
   printf(" invalid c in fp12_copy \n");
  }
- printf(" a: \n");
- fp12_print(a);
- printf(" c: \n");
- fp12_print(c);
         fp6_copy(c[0], a[0]);
         fp6_copy(c[1], a[1]);
- printf(" fp12_copy returning \n");
 }
 
 __device__
@@ -9013,7 +9007,8 @@ __noinline__
 #endif
 void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 	int i, j, k, w = len;
-        fp12_t t, *u = (fp12_t*)malloc(sizeof(fp12_t)*w); 
+        fp12_t t;
+        fp12_t u[6];
 
 	if (len == 0) {
 //		RLC_FREE(u);
@@ -9023,7 +9018,7 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 
 //	fp12_null(t);
 
-        printf("2. fp12_exp_cyc_sps \n");
+ printf("len: %d \n",len);
 //	RLC_TRY {
 		if (u == NULL) {
                  printf(" no memory in fp12_exp_cyc_sps...\n");
@@ -9046,12 +9041,9 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
   u[i][1][2][0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
   u[i][1][2][1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
 		}
-// printf("3. fp12_exp_cyc_sps \n");
 		fp12_new(t);
-// printf("4. fp12_exp_cyc_sps \n");
 
 		fp12_copy(t, a);
-// printf("5. fp12_exp_cyc_sps \n");
 		if (b[0] == 0) {
 			for (j = 0, i = 1; i < len; i++) {
 				k = (b[i] < 0 ? -b[i] : b[i]);
@@ -9073,42 +9065,28 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 			}
 		} else {
 			for (j = 0, i = 0; i < len; i++) {
-// printf("6. fp12_exp_cyc_sps \n");
 				k = (b[i] < 0 ? -b[i] : b[i]);
 				for (; j < k; j++) {
-// printf("7. fp12_exp_cyc_sps \n");
 					fp12_sqr_pck(t, t);
-// printf("8. fp12_exp_cyc_sps \n");
 				}
 				if (b[i] < 0) {
-// printf("9. fp12_exp_cyc_sps \n");
 					fp12_inv_cyc(u[i], t);
-// printf("10. fp12_exp_cyc_sps \n");
 				} else {
- printf("11. fp12_exp_cyc_sps \n");
- printf("i: %d \n",i);
 					fp12_copy(u[i], t);
- printf("12. fp12_exp_cyc_sps \n");
 				}
 			}
-// printf("13. fp12_exp_cyc_sps \n");
 
 			fp12_back_cyc_sim(u, u, w);
-// printf("14. fp12_exp_cyc_sps \n");
 
 			fp12_copy(c, u[0]);
-// printf("15. fp12_exp_cyc_sps \n");
 			for (i = 1; i < w; i++) {
-// printf("16. fp12_exp_cyc_sps \n");
 				fp12_mul(c, c, u[i]);
-// printf("17. fp12_exp_cyc_sps \n");
 			}
 		}
 
 		if (sign == RLC_NEG) {
 			fp12_inv_cyc(c, c);
 		}
- printf("18. fp12_exp_cyc_sps \n");
 //	}
 //	RLC_CATCH_ANY {
 //		RLC_THROW(ERR_CAUGHT);
@@ -9320,6 +9298,7 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
 
 		/* t2 = f * f^2 * t3^x. */
 		fp12_exp_cyc_sps(t2, t3, b, l, bn_sign(x));
+                free(b);
 		fp12_mul(t2, t2, t0);
 		fp12_mul(t2, t2, c);
 
@@ -9327,7 +9306,7 @@ static void pp_exp_b12(fp12_t c, fp12_t a) {
 		fp12_mul(t1, t1, t2);
 		fp12_frb(t2, t3, 1);
 		fp12_mul(c, t1, t2);
-                free(b);
+ printf(" Leaving the final exponentiation step...\n");
 
 //		fp12_free(t0);
 
@@ -9437,6 +9416,51 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   printf(" Miller loop...\n");
   /* r = f_{|a|,Q}(P). */
   pp_mil_k12(r, t, _q, _p, j, a);
+
+  free(_q[0]->x[0]);
+  free(_q[0]->x[1]);
+
+  free(_q[0]->y[0]);
+  free(_q[0]->y[1]);
+
+  free(_q[0]->z[0]);
+  free(_q[0]->z[1]);
+
+  free(_q[1]->x[0]);
+  free(_q[1]->x[1]);
+
+  free(_q[1]->y[0]);
+  free(_q[1]->y[1]);
+
+  free(_q[1]->z[0]);
+  free(_q[1]->z[1]);
+  free(_q[0]);
+  free(_q[1]);
+
+  free(t[0]->x[0]);
+  free(t[0]->x[1]);
+
+  free(t[0]->y[0]);
+  free(t[0]->y[1]);
+
+  free(t[0]->z[0]);
+  free(t[0]->z[1]);
+
+  free(t[1]->x[0]);
+  free(t[1]->x[1]);
+
+  free(t[1]->y[0]);
+  free(t[1]->y[1]);
+
+  free(t[1]->z[0]);
+  free(t[1]->z[1]);
+
+  free(t[1]);
+  free(t[0]);
+
+ free(_p[0]);
+ free(_p[1]);
+
   if (bn_sign(a) == RLC_NEG) {
    fp12_inv_cyc(r, r);
   }
