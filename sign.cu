@@ -6906,6 +6906,10 @@ void fp2_sqrn_low(dv2_t c, fp2_t a) {
 #endif
 	/* c = c0 + c1 * u. */
 }
+static __device__ __inline__ int __mysmid(){
+  int smid;
+  asm volatile("mov.u32 %0, %%smid;" : "=r"(smid));
+  return smid;}
 __device__
 #if INLINE == 0
 __noinline__
@@ -6915,6 +6919,7 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 	fp2_t curveb;
 	dv2_t u0, u1;
 	int one = 1, zero = 0;
+        clock_t start = clock(); 
 
 //	fp2_null(t0);
 //	fp2_null(t1);
@@ -7071,6 +7076,8 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //		fp2_free(t6);
 //		dv2_free(u0);
 //		dv2_free(u1);
+        clock_t stop = clock();
+        printf("point doubling took: %d cycles smid: %d \n",(int)(stop - start),__mysmid());
 }
 __device__
 #if INLINE == 0
@@ -9065,6 +9072,7 @@ void fp12_exp_cyc_sps(fp12_t c, fp12_t a, const int *b, int len, int sign) {
 		} else {
 			for (j = 0, i = 0; i < len; i++) {
 				k = (b[i] < 0 ? -b[i] : b[i]);
+ printf("i: %d \n",i);
 				for (; j < k; j++) {
 					fp12_sqr_pck(t, t);
 				}
@@ -9414,7 +9422,10 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   fp12_set_dig(r, 1);
   printf(" Miller loop...\n");
   /* r = f_{|a|,Q}(P). */
+  clock_t start = clock(); 
   pp_mil_k12(r, t, _q, _p, j, a);
+  clock_t stop = clock();
+  printf("pp_mil_k12 took: %d cycles \n",(int)(stop - start));
 
   free(_q[0]->x[0]);
   free(_q[0]->x[1]);
@@ -9463,7 +9474,10 @@ void pp_map_sim_oatep_k12(fp12_t r, ep_t *p, ep2_t *q, int m) {
   if (bn_sign(a) == RLC_NEG) {
    fp12_inv_cyc(r, r);
   }
+  start = clock(); 
   pp_exp_k12(r, r);
+  stop = clock();
+  printf("pp_exp_k12 took: %d cycles \n",(int)(stop - start));
  printf(" Result: \n");
  fp12_print(r);
 
@@ -9755,7 +9769,19 @@ void runbls(uint8_t *prime, uint64_t *prime2)
   free(e2);
   return;
 }
+int mpc(){
 
+   cudaDeviceProp prop;
+
+      cudaGetDeviceProperties(&prop, 0);
+
+      printf(" Name: %s\n",prop.name );
+      printf(" Compute capability: %d.%d\n", prop.major, prop.minor );
+      printf(" Clock rate: %d\n",prop.clockRate );
+      printf(" Total global memory: %ld (%d MB)\n", prop.totalGlobalMem, int(prop.totalGlobalMem*9.5367e-7));
+      printf(" Multiprocessor count: %d\n", prop.multiProcessorCount);
+      return prop.multiProcessorCount;
+}
 int main(void)
 {
   uint8_t *msg, *d_msg;
@@ -9767,6 +9793,7 @@ int main(void)
 
   uint64_t *quotient, *remainder;
 
+  int info =  mpc();
   msg = (uint8_t*)malloc(64*sizeof(uint8_t));
   cudaMalloc(&d_msg, 64*sizeof(uint8_t)); 
 
