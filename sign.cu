@@ -770,6 +770,8 @@ dig_t fp_addn_low(dig_t *c, const dig_t *a, const dig_t *b) {
         int i;
         dig_t carry, c0, c1, r0, r1;
         carry = 0;
+ clock_t start = clock();
+
         for (i = 0; i < RLC_FP_DIGS; i++, a++, b++, c++) {
                 r0 = (*a) + (*b);
                 c0 = (r0 < (*a));
@@ -778,6 +780,8 @@ dig_t fp_addn_low(dig_t *c, const dig_t *a, const dig_t *b) {
                 carry = c0 | c1;
                 (*c) = r1;
         }
+ clock_t stop = clock();
+ printf("fp_addn_low took: %d cycles \n",(int)(stop - start));
         return carry;
 }
 __device__
@@ -1664,10 +1668,6 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 
 
 	norm = util_bits_dig(b[sb - 1]) % RLC_DIG;
-//        printf("\n.B 1 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 	if (norm < (int)(RLC_DIG - 1)) {
 		norm = (RLC_DIG - 1) - norm;
@@ -1676,15 +1676,7 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 			a[sa++] = carry;
 		}
 
-//        printf("\n.B 2 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 		carry = bn_lshb_low(b, b, sb, norm);
-//        printf("\n.B 3 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 
 		if (carry) {
@@ -1693,60 +1685,29 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 	} else {
 		norm = 0;
 	}
-//        exit(0);
 
 	n = sa - 1;
 	t = sb - 1;
 
-//        printf("\n.B 4 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 
 	/* Shift y so that the most significant digit of y is aligned with the
 	 * most significant digit of x. */
 	dv_lshd(b, b, sb + (n - t), (n - t));
-//        printf("\n.B 5 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
-
-
-//	gmp_printf ("b %Mu\n", b[0]);
-//        gmp_printf ("b %Mu\n", b[1]);
-//        gmp_printf ("b %Mu\n", b[2]);
-//        gmp_printf ("b %Mu\n", b[3]);
-//        gmp_printf ("b %Mu\n", b[4]);
-//        gmp_printf ("b %Mu\n", b[5]);
-//        printf("\n....................... \n");
 
 	/* Find the most significant digit of the quotient. */
-//        printf("Let us enter the loop...\n");
 	while (dv_cmp(a, b, sa) != RLC_LT) {
 		c[n - t]++;
-//                printf("arithmetic call...\n");
-//                printf("%" PRIu64 "\n", c[n - t]);
 		bn_subn_low(a, a, b, sa);
 	}
 
-//        printf("\n.B 6 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 	/* Shift y back. */
 	dv_rshd(b, b, sb + (n - t), (n - t));
-//        printf("\n.B 7 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 
 	/* Find the remaining digits. */
-//        printf("limits: %d %d ", n, t+1);
 	for (i = n; i >= (t + 1); i--) {
-//        printf("t equlas: %d \n", t);
 		dig_t tmp;
 
 		if (i > sa) {
@@ -1758,12 +1719,9 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 		} else {
 			RLC_DIV_DIG(c[i - t - 1], tmp, a[i], a[i - 1], b[t]);
 		}
-//        printf("\n.B 8 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 		c[i - t - 1]++;
+
 		do {
 			c[i - t - 1]--;
 			t1[0] = (t - 1 < 0) ? 0 : b[t - 1];
@@ -1776,10 +1734,6 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 			t2[1] = (i - 1 < 0) ? 0 : a[i - 1];
 			t2[2] = a[i];
 		} while (dv_cmp(t1, t2, 3) == RLC_GT);
-//        printf("\n.B 9 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 
 		carry = bn_mul1_low(d, b, c[i - t - 1], sb);
@@ -1794,10 +1748,6 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 			carry = bn_sub1_low(a + sd, a + sd, carry, sa - sd);
 		}
 
-//        printf("\n.B 10 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 		if (carry) {
 			sd = sb + (i - t - 1);
@@ -1807,10 +1757,6 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 		}
 	}
 	/* Remainder should be not be longer than the divisor. */
-//        printf("\n.B 11 ..\n");
-//        for(int i=0; i < sb; i++){
-//         printf ("b%d: %" PRIu64 "\n",i,  b[i]);
-//        }
 
 	bn_rshb_low(d, a, sb, norm);
 
@@ -1876,25 +1822,16 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         x->sign = RLC_POS;
 
         q = (bn_t) malloc(sizeof(bn_st));
-// printf("5. bn_div_imp");
         q->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("6. bn_div_imp");
         q->alloc = RLC_BN_SIZE;
-// printf("7. bn_div_imp");
         y = (bn_t) malloc(sizeof(bn_st));
-// printf("8. bn_div_imp");
         y->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("9. bn_div_imp");
         y->alloc = RLC_BN_SIZE;
-// printf("10. bn_div_imp");
         y->sign = RLC_POS;
 
         r = (bn_t) malloc(sizeof(bn_st));
-// printf("11. bn_div_imp");
         r->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
-// printf("12. bn_div_imp");
         r->alloc = RLC_BN_SIZE;
-// printf("13. bn_div_imp");
         r->sign = RLC_POS;
 
         bn_new(x);
@@ -1902,44 +1839,19 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
         bn_new(y);
         bn_new(r);
 
-//        printf("a-> used %d ....\n", a->used);
-//        printf("b-> used %d ....\n", b->used);
-
-//	printf ("a1: %" PRIu64 "\n", a->dp[0]);
-//	printf ("a2: %" PRIu64 "\n", a->dp[1]);
-//	printf ("a3: %" PRIu64 "\n", a->dp[2]);
-//	printf ("a4: %" PRIu64 "\n", a->dp[3]);
-//	printf ("a5: %" PRIu64 "\n", a->dp[4]);
-//	printf ("a6: %" PRIu64 "\n", a->dp[5]);
-//        printf("\n....................... \n");
-//        printf("\n....................... \n");
-//        printf("\n....................... \n");
-//	printf ("b1: %" PRIu64 "\n", b->dp[0]);
-//	printf ("b2: %" PRIu64 "\n", b->dp[1]);
-//	printf ("b3: %" PRIu64 "\n", b->dp[2]);
-//	printf ("b4: %" PRIu64 "\n", b->dp[3]);
-//	printf ("b5: %" PRIu64 "\n", b->dp[4]);
-//	printf ("b6: %" PRIu64 "\n", b->dp[5]);
 
         /* If |a| < |b|, we're done. */
-// printf("14. bn_div_imp");
         if (bn_cmp_abs(a, b) == RLC_LT) {
 
-//        printf("bn_cmp_abs(a, b) == RLC_LT...\n");
-//        printf("a->sign: %d\n", a->sign);
-//        printf("b->sign: %d\n", b->sign);
 
                 if (bn_sign(a) == bn_sign(b)) {
-//// printf("15. bn_div_imp");
                         if (c != NULL) {
-//                        printf("bn_zero ...\n");
                                 bn_zero(c);
                         }
                         if (d != NULL) {
                                 bn_copy(d, a);
                         }
                 } else {
-// printf("16. bn_div_imp");
                         if (c != NULL) {
                                 bn_set_dig(c, 1);
                                 bn_neg(c, c);
@@ -1948,13 +1860,11 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
                                 bn_add(d, a, b);
                         }
                 }
-//                printf("Returning from function call...");
                 return;
         }
 
                 /* Be conservative about space for scratch memory, many attempts to
                  * optimize these had invalid reads. */
-// printf("17. bn_div_imp");
 
                 bn_new_size(x, a->used + 1);
 // printf("18. bn_div_imp");
@@ -2106,32 +2016,22 @@ void fp_rdc_basic(fp_t c, dv_t a) {
         t2 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
         t3 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
-//   printf("RLC_DV_DIGS %d , RLC_FP_DIGS %d inside fp_rdc_basic...\n",RLC_DV_DIGS, RLC_FP_DIGS );
-
-//  printf("a in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *a);
-
         dv_copy(t2, a, 2 * RLC_FP_DIGS);
-//  printf("t2 in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *t2);
+ clock_t start = clock();
         dv_copy(t3, shared_prime, RLC_FP_DIGS);
+ clock_t stop = clock();
+ printf("dv_copy SHARED_PRIME took: %d cycles \n",(int)(stop - start));
 
-//  printf("t3 in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *t3);
-//  printf("t2 in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *t2);
 // itt a t/knek tul kicsi hely van foglalva es tul fogjak cimezni egymast....
+
+ start = clock();
 
         bn_divn_low(t0, t1, t2, 2 * RLC_FP_DIGS, t3, RLC_FP_DIGS);
 
-//  printf("t0 in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *t0);
-//  printf("t1 in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *t1);
+ stop = clock();
+ printf("bn_divn_low took: %d cycles \n",(int)(stop - start));
+
         fp_copy(c, t1);
-//  printf("c in fp_rdc_basic: \n ");
-//  printf("%" PRIu64 "\n", *c);
-//        printf("leaving fp_rdc_basic...\n");
         free(t0);
         free(t1);
         free(t2);
@@ -2411,6 +2311,8 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
         dv_t t;
         dig_t carry;
 
+ clock_t start = clock();
+
 //        dv_null(t);
         /* We need a temporary variable so that c can be a or b. */
 //        dv_new(t);
@@ -2432,6 +2334,8 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
 //        printf("CCCCC result in fp_mul_basic: ");
 //        printf("%" PRIu64 "\n", *c);
         free(t);
+ clock_t stop = clock();
+ printf("fp_mul_basic took: %d cycles \n",(int)(stop - start));
 }
 __device__
 #if INLINE == 0
@@ -2938,9 +2842,6 @@ __noinline__
 void fp2_sqr_basic(fp2_t c, fp2_t a) {
  fp_t t0, t1, t2;
 
-// printf("fp2_sqr_basic a: %" PRIu64 "\n", *a[0]);
-// printf("fp2_sqr_basic a: %" PRIu64 "\n", *a[1]);
-
  t0 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
  t1 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
  t2 = (fp_t)malloc(RLC_BN_SIZE * sizeof(dig_t));
@@ -2990,7 +2891,10 @@ __device__
 __noinline__
 #endif
 void fp2_sqr(fp2_t c, fp2_t a) {
+ clock_t start = clock();
  fp2_sqr_basic(c,a);
+ clock_t stop = clock();
+ printf("fp2_sqr_basic took: %d cycles \n",(int)(stop - start));
 }
 
 __device__
@@ -7007,13 +6911,29 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //		} else {
 			/* A = x1^2. */
 			fp2_sqr(t0, q->x);
+        clock_t stop = clock();
+        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			/* B = y1^2. */
 			fp2_sqr(t1, q->y);
+        stop = clock();
+        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			/* C = z1^2. */
 			fp2_sqr(t2, q->z);
+        stop = clock();
+        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			/* D = 3bC, for general b. */
 			fp2_dbl(t3, t2);
+        stop = clock();
+        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			fp2_add(t3, t3, t2);
+        stop = clock();
+        printf("fp2_add took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
+
         fp2_new(curveb);
         curveb[0][0] = 4;
         curveb[1][0] = 4;
@@ -7023,7 +6943,11 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 			/* E = (x1 + y1)^2 - A - B. */
 			fp2_add(t4, q->x, q->y);
 			fp2_sqr(t4, t4);
+        start = clock();
 			fp2_sub(t4, t4, t0);
+        stop = clock();
+        printf("fp2_sub took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			fp2_sub(t4, t4, t1);
 
 			/* F = (y1 + z1)^2 - B - C. */
@@ -7033,7 +6957,11 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 			fp2_sub(t5, t5, t2);
 
 			/* G = 3D. */
+        start = clock();
 			fp2_dbl(t6, t3);
+        stop = clock();
+        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
+        start = clock();
 			fp2_add(t6, t6, t3);
 
 			/* x3 = E * (B - G). */
@@ -7076,8 +7004,6 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 //		fp2_free(t6);
 //		dv2_free(u0);
 //		dv2_free(u1);
-        clock_t stop = clock();
-        printf("point doubling took: %d cycles smid: %d \n",(int)(stop - start),__mysmid());
 }
 __device__
 #if INLINE == 0
