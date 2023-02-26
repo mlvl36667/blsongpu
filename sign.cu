@@ -770,7 +770,7 @@ dig_t fp_addn_low(dig_t *c, const dig_t *a, const dig_t *b) {
         int i;
         dig_t carry, c0, c1, r0, r1;
         carry = 0;
- clock_t start = clock();
+// clock_t start = clock();
 
         for (i = 0; i < RLC_FP_DIGS; i++, a++, b++, c++) {
                 r0 = (*a) + (*b);
@@ -780,8 +780,8 @@ dig_t fp_addn_low(dig_t *c, const dig_t *a, const dig_t *b) {
                 carry = c0 | c1;
                 (*c) = r1;
         }
- clock_t stop = clock();
- printf("fp_addn_low took: %d cycles \n",(int)(stop - start));
+// clock_t stop = clock();
+// printf("fp_addn_low took: %d cycles \n",(int)(stop - start));
         return carry;
 }
 __device__
@@ -2017,19 +2017,19 @@ void fp_rdc_basic(fp_t c, dv_t a) {
         t3 = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
         dv_copy(t2, a, 2 * RLC_FP_DIGS);
- clock_t start = clock();
         dv_copy(t3, shared_prime, RLC_FP_DIGS);
- clock_t stop = clock();
- printf("dv_copy SHARED_PRIME took: %d cycles \n",(int)(stop - start));
+// clock_t stop = clock();
+// printf("dv_copy SHARED_PRIME took: %d cycles \n",(int)(stop - start));
 
 // itt a t/knek tul kicsi hely van foglalva es tul fogjak cimezni egymast....
 
- start = clock();
+// start = clock();
+ clock_t start = clock();
 
         bn_divn_low(t0, t1, t2, 2 * RLC_FP_DIGS, t3, RLC_FP_DIGS);
 
- stop = clock();
- printf("bn_divn_low took: %d cycles \n",(int)(stop - start));
+ clock_t stop = clock();
+// printf("bn_divn_low took: %d cycles \n",(int)(stop - start));
 
         fp_copy(c, t1);
         free(t0);
@@ -2162,17 +2162,9 @@ void fp_sqr_basic(fp_t c, const fp_t a) {
                 t[RLC_FP_DIGS + i + 1] =
                                 bn_sqra_low(t + 2 * i, a + i, RLC_FP_DIGS - i);
         }
-//  printf("2. t in fp_sqr_basic: \n ");
-//  printf("%" PRIu64 "\n", *t);
         bn_sqra_low(t + 2 * i, a + i, 1);
-//  printf("3. t in fp_sqr_basic: \n ");
-//  printf("%" PRIu64 "\n", *t);
-//  printf("calling fp_rdc_basic... \n ");
         fp_rdc_basic(c, t);
-//  printf("4. c in fp_sqr_basic: \n ");
-//  printf("%" PRIu64 "\n", *c);
         free(t);
-//        printf("leaving  fp_sqr_basic \n");
 }
 __device__
 #if INLINE == 0
@@ -2316,11 +2308,6 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
 //        dv_null(t);
         /* We need a temporary variable so that c can be a or b. */
 //        dv_new(t);
-// printf(" Multiplying in fp_mul_basic: \n");
-// printf(" a: ");
-// fp_print(a);
-// printf(" b: ");
-// fp_print(b);
         t = (dv_t ) malloc( (RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8))*sizeof(dig_t));
 
         dv_zero(t, 2 * RLC_FP_DIGS);
@@ -2328,14 +2315,10 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
                 carry = fp_mula_low(t + i, b, *(a + i));
                 *(t + i + RLC_FP_DIGS) = carry;
         }
-//        printf("result in fp_mul_basic: ");
-//        printf("%" PRIu64 "\n", *t);
         fp_rdc_basic(c, t);
-//        printf("CCCCC result in fp_mul_basic: ");
-//        printf("%" PRIu64 "\n", *c);
         free(t);
  clock_t stop = clock();
- printf("fp_mul_basic took: %d cycles \n",(int)(stop - start));
+// printf("fp_mul_basic took: %d cycles \n",(int)(stop - start));
 }
 __device__
 #if INLINE == 0
@@ -2894,7 +2877,7 @@ void fp2_sqr(fp2_t c, fp2_t a) {
  clock_t start = clock();
  fp2_sqr_basic(c,a);
  clock_t stop = clock();
- printf("fp2_sqr_basic took: %d cycles \n",(int)(stop - start));
+// printf("fp2_sqr_basic took: %d cycles \n",(int)(stop - start));
 }
 
 __device__
@@ -6409,7 +6392,10 @@ void ep_mul_gen(ep_t r, const bn_t k) {
 
 #ifdef EP_PRECO
         ep_mul_pre_basic(ep_ptr);
+        clock_t start = clock();
         ep_mul_fix(r, ep_ptr, k);
+        clock_t stop = clock();
+        printf("ep_mul_fix took: %dM cycles \n",(int)(stop - start)/1000000);
 #else
         ep_t g;
 
@@ -6912,26 +6898,26 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
 			/* A = x1^2. */
 			fp2_sqr(t0, q->x);
         clock_t stop = clock();
-        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			/* B = y1^2. */
 			fp2_sqr(t1, q->y);
         stop = clock();
-        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			/* C = z1^2. */
 			fp2_sqr(t2, q->z);
         stop = clock();
-        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_sqr took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			/* D = 3bC, for general b. */
 			fp2_dbl(t3, t2);
         stop = clock();
-        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			fp2_add(t3, t3, t2);
         stop = clock();
-        printf("fp2_add took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_add took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 
         fp2_new(curveb);
@@ -6946,7 +6932,7 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
         start = clock();
 			fp2_sub(t4, t4, t0);
         stop = clock();
-        printf("fp2_sub took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_sub took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			fp2_sub(t4, t4, t1);
 
@@ -6960,7 +6946,7 @@ void pp_dbl_k12_projc_lazyr(fp12_t l, ep2_t r, ep2_t q, ep_t p) {
         start = clock();
 			fp2_dbl(t6, t3);
         stop = clock();
-        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
+//        printf("fp2_dbl took: %d cycles \n",(int)(stop - start)/1000000);
         start = clock();
 			fp2_add(t6, t6, t3);
 
@@ -9704,6 +9690,9 @@ int mpc(){
       printf(" Name: %s\n",prop.name );
       printf(" Compute capability: %d.%d\n", prop.major, prop.minor );
       printf(" Clock rate: %d\n",prop.clockRate );
+      printf(" SM count:  %d\n",prop.multiProcessorCount );
+      printf(" Max blocks per SM:  %d\n",prop.maxBlocksPerMultiProcessor );
+      printf(" Max threads per SM:  %d\n",prop.maxThreadsPerMultiProcessor );
       printf(" Total global memory: %ld (%d MB)\n", prop.totalGlobalMem, int(prop.totalGlobalMem*9.5367e-7));
       printf(" Multiprocessor count: %d\n", prop.multiProcessorCount);
       return prop.multiProcessorCount;
