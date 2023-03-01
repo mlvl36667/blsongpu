@@ -18,7 +18,7 @@
 #include <ctype.h>
 
 
-#define NBLOCKS 1
+//#define NBLOCKS 1
 #define NTHREADS 1
 
 #define RLC_TERMS               16
@@ -1665,32 +1665,22 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 
 	/* Normalize x and y so that the leading digit of y is bigger than
 	 * 2^(RLC_DIG-1). */
-
-
 	norm = util_bits_dig(b[sb - 1]) % RLC_DIG;
-
 	if (norm < (int)(RLC_DIG - 1)) {
 		norm = (RLC_DIG - 1) - norm;
 		carry = bn_lshb_low(a, a, sa, norm);
 		if (carry) {
 			a[sa++] = carry;
 		}
-
 		carry = bn_lshb_low(b, b, sb, norm);
-
-
 		if (carry) {
 			b[sb++] = carry;
 		}
 	} else {
 		norm = 0;
 	}
-
 	n = sa - 1;
 	t = sb - 1;
-
-
-
 	/* Shift y so that the most significant digit of y is aligned with the
 	 * most significant digit of x. */
 	dv_lshd(b, b, sb + (n - t), (n - t));
@@ -1701,27 +1691,21 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 		bn_subn_low(a, a, b, sa);
 	}
 
-
 	/* Shift y back. */
 	dv_rshd(b, b, sb + (n - t), (n - t));
-
 
 	/* Find the remaining digits. */
 	for (i = n; i >= (t + 1); i--) {
 		dig_t tmp;
-
 		if (i > sa) {
 			continue;
 		}
-
 		if (a[i] == b[t]) {
 			c[i - t - 1] = RLC_MASK(RLC_DIG);
 		} else {
 			RLC_DIV_DIG(c[i - t - 1], tmp, a[i], a[i - 1], b[t]);
 		}
-
 		c[i - t - 1]++;
-
 		do {
 			c[i - t - 1]--;
 			t1[0] = (t - 1 < 0) ? 0 : b[t - 1];
@@ -1734,21 +1718,16 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 			t2[1] = (i - 1 < 0) ? 0 : a[i - 1];
 			t2[2] = a[i];
 		} while (dv_cmp(t1, t2, 3) == RLC_GT);
-
-
 		carry = bn_mul1_low(d, b, c[i - t - 1], sb);
 		sd = sb;
 		if (carry) {
 			d[sd++] = carry;
 		}
-
 		carry = bn_subn_low(a + (i - t - 1), a + (i - t - 1), d, sd);
 		sd += (i - t - 1);
 		if (sa - sd > 0) {
 			carry = bn_sub1_low(a + sd, a + sd, carry, sa - sd);
 		}
-
-
 		if (carry) {
 			sd = sb + (i - t - 1);
 			carry = bn_addn_low(a + (i - t - 1), a + (i - t - 1), b, sb);
@@ -1757,9 +1736,7 @@ void bn_divn_low(dig_t *c, dig_t *d, dig_t *a, int sa, dig_t *b, int sb) {
 		}
 	}
 	/* Remainder should be not be longer than the divisor. */
-
 	bn_rshb_low(d, a, sb, norm);
-
 }
 __device__
 #if INLINE == 0
@@ -1842,8 +1819,6 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 
         /* If |a| < |b|, we're done. */
         if (bn_cmp_abs(a, b) == RLC_LT) {
-
-
                 if (bn_sign(a) == bn_sign(b)) {
                         if (c != NULL) {
                                 bn_zero(c);
@@ -1867,26 +1842,19 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
                  * optimize these had invalid reads. */
 
                 bn_new_size(x, a->used + 1);
-// printf("18. bn_div_imp");
                 bn_new_size(q, a->used + 1);
                 bn_new_size(y, a->used + 1);
                 bn_new_size(r, a->used + 1);
 
                 bn_zero(q);
                 bn_zero(r);
-// printf("19. bn_div_imp");
                 bn_abs(x, a);
                 bn_abs(y, b);
-
-//                printf("calling bn_divn_low...\n");
 
                 /* Find the sign. */
                 sign = (a->sign == b->sign ? RLC_POS : RLC_NEG);
 
-// printf("20. bn_div_imp");
                 bn_divn_low(q->dp, r->dp, x->dp, a->used, y->dp, b->used);
-// printf("21. bn_div_imp");
-
 
                 q->used = a->used - b->used + 1;
                 q->sign = sign;
@@ -1912,14 +1880,6 @@ void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
                                 bn_sub(d, b, r);
                         }
                 }
-//       printf("leaving bn_div_imp...\n");
-//        printf("\n....................... \n");
-//	printf ("d1: %" PRIu64 "\n", d->dp[0]);
-//	printf ("d2: %" PRIu64 "\n", d->dp[1]);
-//	printf ("d3: %" PRIu64 "\n", d->dp[2]);
-//	printf ("d4: %" PRIu64 "\n", d->dp[3]);
-//	printf ("d5: %" PRIu64 "\n", d->dp[4]);
-//	printf ("d6: %" PRIu64 "\n", d->dp[5]);
         free(q->dp);
         free(q);
         free(y->dp);
@@ -2019,16 +1979,15 @@ void fp_rdc_basic(fp_t c, dv_t a) {
         dv_copy(t2, a, 2 * RLC_FP_DIGS);
         dv_copy(t3, shared_prime, RLC_FP_DIGS);
 // clock_t stop = clock();
-// printf("dv_copy SHARED_PRIME took: %d cycles \n",(int)(stop - start));
 
 // itt a t/knek tul kicsi hely van foglalva es tul fogjak cimezni egymast....
 
 // start = clock();
- clock_t start = clock();
+        clock_t start = clock();
 
         bn_divn_low(t0, t1, t2, 2 * RLC_FP_DIGS, t3, RLC_FP_DIGS);
 
- clock_t stop = clock();
+        clock_t stop = clock();
 // printf("bn_divn_low took: %d cycles \n",(int)(stop - start));
 
         fp_copy(c, t1);
@@ -2303,7 +2262,7 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
         dv_t t;
         dig_t carry;
 
- clock_t start = clock();
+        clock_t start = clock();
 
 //        dv_null(t);
         /* We need a temporary variable so that c can be a or b. */
@@ -2317,8 +2276,8 @@ void fp_mul_basic(fp_t c, const fp_t a, const fp_t b) {
         }
         fp_rdc_basic(c, t);
         free(t);
- clock_t stop = clock();
-// printf("fp_mul_basic took: %d cycles \n",(int)(stop - start));
+        clock_t stop = clock();
+//      printf("fp_mul_basic took: %d cycles \n",(int)(stop - start));
 }
 __device__
 #if INLINE == 0
@@ -2680,6 +2639,7 @@ void fp_exp_basic(fp_t c, const fp_t a, const bn_t b) {
         }
 //        fp_new(r);
         l = bn_bits(b);
+// printf(" bn_bits(b): %d \n",l);
         fp_copy(r, a);
         if(r == NULL){
          printf("r has problems...\n");
@@ -3495,11 +3455,7 @@ int fp_srt(fp_t c, const fp_t a) {
 
 			fp_exp(t0, a, e);
 			fp_sqr(t1, t0);
-//                        printf("t1 es a ezek egyenloek...\n");
-//                        fp_print(t1);
-//                        fp_print(a);
 			r = (fp_cmp(t1, a) == RLC_EQ);
-//                        printf("r: %d\n",r);
 			fp_copy(c, t0);
 //		} else {
 //			int f = 0, m = 0;
@@ -4057,12 +4013,12 @@ void isogeny_map(ep2_t p){
  t3[1] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
 
  /* XXX need to add real support for input projective points */
- printf("Normalizing the coordinates...\n");
+// printf("Normalizing the coordinates...\n");
  if (p->coord != BASIC) {            
   ep2_norm(p, p);                     
  }                                     
  iso2_t coeffs = shared_coeffs;
- printf("Evaluating the polynomial...\n");
+// printf("Evaluating the polynomial...\n");
  /* numerators */                             
  fp2_eval(t0, p->x, coeffs->xn, coeffs->deg_xn);
 // printf("t0: \n");
@@ -4151,7 +4107,7 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
 // print_multiple_precision(shared_map_u[0],1);
 // print_multiple_precision(shared_map_u[1],1);
 // fp2_print(shared_map_u);
- printf("now precomputing the isomap constants...\n");
+// printf("now precomputing the isomap constants...\n");
  /* SSWU map constants */
  /* constants 3 and 4 are a and b for the curve or isogeny */
  shared_c[0][0]   = (fp_t )malloc(RLC_BN_SIZE * sizeof(dig_t));
@@ -4170,7 +4126,7 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
  fp2_mul_basic(shared_c[0], shared_c[0], shared_c[3]); /* c1 = -b / a */
 // Precomputation ends here //
 // Compute the SSWU Map
- printf("Computing the SSWU map ...\n");
+// printf("Computing the SSWU map ...\n");
 
 // printf("t: \n");
 // fp2_print(t);
@@ -4189,7 +4145,7 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
  fp2_add_basic(t2, t1, t0); /* t2 = u^2 * t^4 + u * t^2 */ 
 // printf("u^2 * t^4 + u * t^2: \n");
 // fp2_print(t2);
- printf("Computing the SSWU map finished...\n");
+// printf("Computing the SSWU map finished...\n");
 
  /* handle the exceptional cases */  
  /* XXX(rsw) should be done projectively */   
@@ -4204,31 +4160,31 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
  /* e1 goes out of scope */                                                    
                                                                               
  /* compute x1, g(x1) */                                                    
- printf("compute x1, g(x1)... \n");
+// printf("compute x1, g(x1)... \n");
 // printf("mBoverA: \n");
 // fp2_print(mBoverA);
  fp2_mul_basic(p->x, t2, mBoverA); /* -B / A * (1 + 1 / (u^2 * t^4 + u * t^2)) */
- printf("p->x: \n");
- fp2_print(p->x);
+// printf("p->x: \n");
+// fp2_print(p->x);
  fp2_sqr_basic(p->y, p->x);        /* x^2 */                                    
  fp2_add_basic(p->y, p->y, a);     /* x^2 + a */                               
  fp2_mul_basic(p->y, p->y, p->x);  /* x^3 + a x */                            
  fp2_add_basic(p->y, p->y, b);     /* x^3 + a x + b */                       
 // printf("x^3 + a x + b: \n");
 // fp2_print(p->y);
- printf("compute x1, g(x1) finished... \n");
+// printf("compute x1, g(x1) finished... \n");
  /* compute x2, g(x2) */                                            
- printf("compute x2, g(x2) ... \n");
+// printf("compute x2, g(x2) ... \n");
  fp2_mul_basic(t2, t0, p->x); /* t2 = u * t^2 * x1 */                    
  fp2_mul_basic(t1, t0, t1);   /* t1 = u^3 * t^6 */                      
  fp2_mul_basic(t3, t1, p->y); /* t5 = g(t2) = u^3 * t^6 * g(p->x) */   
- printf("compute x2, g(x2) finished... \n");
+// printf("compute x2, g(x2) finished... \n");
 //  /* XXX(rsw)                                                               */   
 //  /* This should be done in constant time and without computing 2 sqrts.    */  
 //  /* Avoiding a second sqrt relies on knowing the 2-adicity of the modulus. */ 
   if (!fp2_srt(p->y, p->y)) {                                                 
           /* try x2, g(x2) */                                                
-          printf("--- second sqrt--- \n");
+//          printf("--- second sqrt--- \n");
 //          printf("(p->y)^(1/2): \n");               
 //          fp2_print(p->y); 
           fp2_mul_basic(t2, t0, p->x); /* t2 = u * t^2 * x1 */
@@ -4265,8 +4221,8 @@ void map_scalar_to_curve(ep2_t p, fp2_t t){
   }    
   fp2_set_dig(p->z, 1);
   p->coord = BASIC;  
-  printf("p->y: \n");
-  fp2_print(p->y);
+//  printf("p->y: \n");
+//  fp2_print(p->y);
 //  printf("p->z: \n");
 //  fp2_print(p->z);
   free(t0[0]);
@@ -4333,13 +4289,13 @@ void ep2_curve_set_ctmap(const char *a0_str, const char *a1_str, const char *b0_
         fp_read_str(shared_coeffs->b[0], b0_str, 3, 16);
         fp_read_str(shared_coeffs->b[1], b1_str, 3, 16);
 
-        printf("Done reading a and b...\n");
+//        printf("Done reading a and b...\n");
         /* isogeny map coeffs */
         shared_coeffs->deg_xn = ep2_curve_get_coeffs(shared_coeffs->xn, xn_str);
         shared_coeffs->deg_xd = ep2_curve_get_coeffs(shared_coeffs->xd, xd_str);
         shared_coeffs->deg_yn = ep2_curve_get_coeffs(shared_coeffs->yn, yn_str);
         shared_coeffs->deg_yd = ep2_curve_get_coeffs(shared_coeffs->yd, yd_str);
-        printf("Leaving ep2_curve_set_ctmap a and b...\n");
+//        printf("Leaving ep2_curve_set_ctmap a and b...\n");
         return;
 
 //        printf("xn: %d\n", shared_coeffs->deg_xn);
@@ -4373,19 +4329,13 @@ void signmessage(bn_t e, bn_t e2, int sequence,ep2_t p){
  fp2_t ttt;
  bn_st conv;
  bn_st one;
-// printf("sequence:  %d \n", sequence);
-// print_line();
-// printf("shared_prime: \n");
-// print_multiple_precision(shared_prime,6);
-// print_line();
+
  m = (bn_t )malloc(sizeof(bn_t)); 
  m->dp = (dig_t *)malloc(RLC_BN_SIZE * sizeof(dig_t)); 
  m->used = 6;
  for(int i=0; i < 6; i++){
   m->dp[i] = shared_prime[i];
  } 
-
-
 
  m->alloc = RLC_BN_SIZE;
  m->sign = RLC_POS;
@@ -4414,64 +4364,24 @@ void signmessage(bn_t e, bn_t e2, int sequence,ep2_t p){
 // Multiply by the Montgomery reduced prime (u)
   bn_set_dig(&one, 1);
 
-// printf("\n---- one --- \n");
-// for(int i=0; i < one.used; i++){
-//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
-// }
-//  printf("1. one: \n");
-//  print_multiple_precision(one.dp,6);
-//  print_line();
   bn_lsh(&one, &one, RLC_FP_DIGS * RLC_DIG);
-// printf("\n---- one 1--- \n");
-// for(int i=0; i < one.used; i++){
-//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
-// }
-//  printf("2. one: \n");
-//  print_multiple_precision(one.dp,6);
-//  print_line();
 
 // Calculate 1 mod p
   bn_mod_basic(&one, &one, m);
-// printf("\n---- one 2--- \n");
-// for(int i=0; i < one.used; i++){
-//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
-// }
-//  printf("3. one: \n");
-//  print_multiple_precision(one.dp,6);
-//  print_line();
   r = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
   fp_add_basic(r, one.dp, one.dp);
-// printf("\n---- one 3--- \n");
-// for(int i=0; i < one.used; i++){
-//  printf("one %d %" PRIu64 " \n",i, one.dp[i]);
-// }
+
   tt = (bn_t ) malloc(sizeof(bn_st));
   tt->dp = (dig_t* ) malloc(RLC_BN_SIZE * sizeof(dig_t));
   tt->alloc = RLC_BN_SIZE;
   tt->sign = RLC_POS;
   bn_set_dig(u, RLC_FP_DIGS);
   bn_lsh(u, u, RLC_DIG_LOG);
-//  printf("r: \n");
-//  print_multiple_precision(r,6);
-//  print_line();
-//
-//  printf("u: \n");
-//  print_multiple_precision(u->dp,6);
-//  print_line();
-// printf("\n---- u  --- \n");
-// for(int i=0; i < u->used; i++){
-//  printf("u %d %" PRIu64 " \n",i, u->dp[i]);
-// }
-// printf("\n---- t --- \n");
 
   fp_exp_basic(conv.dp, r, u);
   conv.used = RLC_FP_DIGS;
   bn_trim(&(conv));
 
-// printf("\n---- conv --- \n");
-// for(int i=0; i < conv.used; i++){
-//  printf("conv %d %" PRIu64 " \n",i, conv.dp[i]);
-// }
 /////////////////////////////////////////////////////////////////////////
 // Ez nagyon gany megoldas...
   shared_conv[0] = conv.dp[0];
@@ -4495,8 +4405,8 @@ void signmessage(bn_t e, bn_t e2, int sequence,ep2_t p){
 
   fp_prime_conv(ttt[0], e);
   fp_prime_conv(ttt[1], e2);
-  printf("message: \n");
-  fp2_print(ttt);
+//  printf("message: \n");
+//  fp2_print(ttt);
 //  printf("bID %d thID: %d ttt[0] %" PRIu64 " ttt[1] %" PRIu64 "\n",blockIdx.x, threadIdx.x,  *ttt[0], *ttt[1]);
 //  fp_print(ttt[0]);
 //  fp_print(ttt[1]);
@@ -4504,18 +4414,15 @@ void signmessage(bn_t e, bn_t e2, int sequence,ep2_t p){
 /////////////////////////////////////////////////////////////////////////
   /* sign of t */                                                                
   neg = fp2_sgn0(ttt, e);
-  printf("Setting the isogeny map ...\n");
+//  printf("Setting the isogeny map ...\n");
 // Calculate parameters for the curve isogeny
   ep2_curve_set_ctmap(B12_P381_ISO_A0, B12_P381_ISO_A1, B12_P381_ISO_B0, B12_P381_ISO_B1, B12_P381_ISO_XN, B12_P381_ISO_XD, B12_P381_ISO_YN, B12_P381_ISO_YD);
 // Map scalar to B12_P381
-  printf("Mapping the scalar to the curve ...\n");
-
-
-
+//  printf("Mapping the scalar to the curve ...\n");
 
   map_scalar_to_curve(p, ttt);
 
-  printf("Finished mapping the scalar to the curve ...\n");
+//  printf("Finished mapping the scalar to the curve ...\n");
 
   neg = neg != fp2_sgn0(p->y, e);
 //  printf("1. PT->y: \n");
@@ -4532,15 +4439,15 @@ void signmessage(bn_t e, bn_t e2, int sequence,ep2_t p){
 
 // Now apply the isogeny map
 
-  printf("Now applying the isogeny map... \n");
+//  printf("Now applying the isogeny map... \n");
 
   isogeny_map(p);
 
-  printf("Isogeny map applied successfully... \n");
+//  printf("Isogeny map applied successfully... \n");
 ////////////////////////////////////////////////////////////////////
-  printf("The resulting point (P) on BLS12-381: \n");
-  ep2_print(p);
-  printf("Deallocating memory ...\n");
+//  printf("\n The result (P) on BLS12-381: (%d) \n", blockIdx.x);
+//  ep2_print(p);
+//  printf("Deallocating memory ...\n");
 
   free(tt->dp);
   free(u->dp);
@@ -9452,12 +9359,16 @@ void convert_from_hexa(uint8_t *source_array, uint64_t *target_array, int max_in
   }
 
 }
-__global__
-void runbls(uint8_t *prime, uint64_t *prime2)
+__device__
+#if INLINE == 0
+__noinline__
+#endif
+void mapmessage(uint8_t *prime, uint64_t *prime2, char* message_string_1)
 {
  bn_t e, e2;
    uint8_t  idx0;
    uint8_t  idx1;
+   time_t t;
    ep2_t p,qqq;
    ep2_t q;
    bn_t x;
@@ -9503,7 +9414,6 @@ void runbls(uint8_t *prime, uint64_t *prime2)
 
 // vector<uint8_t> message = {11};
 
- char message_string_1[513] = "c70dbacf6414ea05360d6473c0a1e642b9eceeb49a5bab0d59c44864581dac4643303634876cc3f878fbb5fc334dc072a7fce16c5bdd91b70ff3aca4c178ecd57804bb38093ca6df3a34ee1b8001acab17fcb9df58e4630c9201687491cfd39f2e9600ba610a72d7b6cf731bbce9f4320a3ef506a5a574474331bab6fc45b3798aea69f8be5513ae3e69b073ecf82b2a5e63decb15ff32c2146374868189359bfc6ae1cfa585b7810304ac30aa28f2654e05a422148f1f5884657b9d02dc0ce1787e53abe2d0ea79f140bc95cb2564e27fd60399e3cbdac7fb7e3e1bd166033ac375ea14c80cdadddefbeebf263f42b154ba0228a9163f5be49242a96b30ce66";
 // 15CC3F292D66704A 62687D6E2DCB5913 7C9E20D357539F96 9F51EABD020D64E0 81792D01F15CC248 1D44777B8BAFC9FD ttt[0]
 // 147765C676F3B800 6798BA4300F29F76 27CBE052A3D0397E CE0A4A7079E5EFEF 45DECCC08A4147E2 345BA7EC94B37852 ttt[1]
 // P+Q after Forbenius: 
@@ -9513,7 +9423,6 @@ void runbls(uint8_t *prime, uint64_t *prime2)
 // 1979ECA2D88265FB 96CF461427634369 7074995C4D3FA986 CEA781C98A77AAB4 F9F914F079C5C5D4 FCAC03952C4937EF
 // 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000001
 // 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000 0000000000000000
-
 
  char message_string_2[513] = "975a7a3edf0c907a8670af92ed36b3a1e94940ed8d4fe0e54592e0a4d6527b5bd6fd4cb9968d760b68be1dc82f576a6a73cc0714e02e353ad6d510f5dfc7f02479abf7ee20e927345cc36b408d3fcd05729fdf18f74f4ad91cc4bd50d3795fe5cfbbfb060689552b39e996fcece89e258b7db611a41c271216af110d493e81e96f9b1aa1696ef41c6573563e84c547de86f18d3ea897956dda7ca5101a47138c906602acf2ebd4cc1c8411b1e4f83825eaacbe54c9ed8a5ae2df3dd04bc77f223e03d78e10ca95d59de0bc047dd33e5a170473d8f70d94bf467ed9684a1ed05cff88779990ba1aa0832005af2a19be3cdd46e68094ed0ba34789c80f24d5f07f";
  char message_string_3[513] = "3d762157e3c4566456bb1a25654b4c17dcc15079d6343a54b76723a2da8580e22fcab914a229f2885d46ce3ac0beb3d1a64a26b1b166acb26b284b25586e1f8d0f3ee175ab69ad80ab1fb623623d1cd750b28c5ba6062d0573ab2b66a83457afce074f5179b8b849fc82d8957121c7bc73b48a64c59e3bd51533769bcb48a61190acf98407ea195ca53ec47b1261227f2fb2652436c094990482889d569b310991c4ae7dcddb375c956a705841a9c5fc87acef7c35f461b4f26d5031b3ce6857f90c78ce931c006f61a3410fef514e1070d07d15cc429d42a86edae22a3650777e94810e873728cc769704660d07a488d3d8efc503fb8c7fdc5de06743fb4936";
@@ -9542,11 +9451,10 @@ void runbls(uint8_t *prime, uint64_t *prime2)
   int  k = i / 2 - 1;
   msg[k] = (uint8_t)(hashmap[idx0] << 4) | hashmap[idx1];
  }
- for(int i = 0; i<256; i++){
-  printf("%02x",msg[i]);
- }
+// for(int i = 0; i<256; i++){
+//  printf("%02x",msg[i]);
+// }
 
-  printf("\n");
 
   p = (ep2_t)malloc(sizeof(ep2_st));
   p->x[0] = (fp_t)malloc((RLC_FP_DIGS + RLC_PAD(RLC_FP_BYTES)/(RLC_DIG / 8)) * sizeof(dig_t));
@@ -9575,6 +9483,7 @@ void runbls(uint8_t *prime, uint64_t *prime2)
   bn_read_bin(e, msg+128, 64);
   bn_read_bin(e2, msg+192, 64);
   signmessage(e,e2, 1,q);
+  return;
 
   ep2_add_projc(p, p, q);
   printf("P+Q: \n");
@@ -9681,6 +9590,17 @@ void runbls(uint8_t *prime, uint64_t *prime2)
   free(e2);
   return;
 }
+__global__
+void runbls(uint8_t *prime, uint64_t *prime2, char* message_string_1, int size)
+{
+
+  for(int i=0; i < size; i++){
+   if(threadIdx.x == i){
+    mapmessage(prime,prime2,message_string_1 + i * 512);
+   }
+  }
+  return;
+}
 int mpc(){
 
    cudaDeviceProp prop;
@@ -9697,7 +9617,7 @@ int mpc(){
       printf(" Multiprocessor count: %d\n", prop.multiProcessorCount);
       return prop.multiProcessorCount;
 }
-int main(void)
+int main(int argc, char *argv[])
 {
   uint8_t *msg, *d_msg;
   uint64_t *msg2, *d_msg2;
@@ -9709,6 +9629,8 @@ int main(void)
   uint64_t *quotient, *remainder;
 
   int info =  mpc();
+  int parallel;
+
   msg = (uint8_t*)malloc(64*sizeof(uint8_t));
   cudaMalloc(&d_msg, 64*sizeof(uint8_t)); 
 
@@ -9726,6 +9648,20 @@ int main(void)
 
   cudaMalloc(&quotient, (6+1)*sizeof(uint64_t)); 
   cudaMalloc(&remainder, (6+1)*sizeof(uint64_t)); 
+
+//  char message_string_1[5130] = "c70dbacf6414ea05360d6473c0a1e642b9eceeb49a5bab0d59c44864581dac4643303634876cc3f878fbb5fc334dc072a7fce16c5bdd91b70ff3aca4c178ecd57804bb38093ca6df3a34ee1b8001acab17fcb9df58e4630c9201687491cfd39f2e9600ba610a72d7b6cf731bbce9f4320a3ef506a5a574474331bab6fc45b3798aea69f8be5513ae3e69b073ecf82b2a5e63decb15ff32c2146374868189359bfc6ae1cfa585b7810304ac30aa28f2654e05a422148f1f5884657b9d02dc0ce1787e53abe2d0ea79f140bc95cb2564e27fd60399e3cbdac7fb7e3e1bd166033ac375ea14c80cdadddefbeebf263f42b154ba0228a9163f5be49242a96b30ce66";
+  char* message_string_1;
+  sscanf (argv[1],"%d",&parallel);
+  
+  printf("running on (%d) threads \n",parallel);
+  message_string_1 = (char*) malloc(parallel*513*sizeof(char));
+
+  for(int ii=0; ii < parallel*513; ii++){
+   message_string_1[ii] = 'c';
+  }
+
+  char* dmsg_to_transfer;
+  cudaMalloc(&dmsg_to_transfer, parallel*513*sizeof(char)); 
 
   prime[47] = 0xAB;
   prime[46] = 0xAA;
@@ -9783,6 +9719,7 @@ int main(void)
   cudaMemcpy(d_msg, msg, 64*sizeof(uint8_t), cudaMemcpyHostToDevice);
   cudaMemcpy(d_msg_first, msg_first, 64*sizeof(uint8_t), cudaMemcpyHostToDevice);
   cudaMemcpy(cuda_prime, prime, 48*sizeof(uint8_t), cudaMemcpyHostToDevice);
+  cudaMemcpy(dmsg_to_transfer, message_string_1, parallel*513*sizeof(char), cudaMemcpyHostToDevice);
 
   size_t deviceLimit;
   gpuErrChk(cudaDeviceGetLimit(&deviceLimit, cudaLimitStackSize));
@@ -9798,7 +9735,7 @@ int main(void)
   cudaEventCreate(&start);
   cudaEventRecord(start,0);
 
-  runbls<<<NBLOCKS, NTHREADS>>>(cuda_prime, cuda_prime_2);
+  runbls<<<1, parallel>>>(cuda_prime, cuda_prime_2, dmsg_to_transfer, parallel);
 
 
   cudaEventCreate(&stop);
@@ -9807,6 +9744,7 @@ int main(void)
 
   cudaEventElapsedTime(&elapsedTime, start,stop);
   printf("Elapsed time : %f ms\n" ,elapsedTime);
+  printf("Unit time : %f ms\n" ,elapsedTime/(parallel*NTHREADS));
 
   cudaMemcpy(msg2, d_msg2, 8*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   cudaMemcpy(prime_2, cuda_prime_2, 6*sizeof(uint64_t), cudaMemcpyDeviceToHost);
