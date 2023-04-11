@@ -9,3 +9,4 @@ as -o utils.o utils.s
 rm -rf utils.i utils.s
 
 gcc -o rns rns.o  utils.o
+rm -rf *.o
