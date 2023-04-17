@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <gmp.h>
+#include <string.h>
+#include <openssl/sha.h>
 
 int main()
 {
@@ -129,6 +131,28 @@ int main()
     {
         printf("A szam biztosan prim.\n");
     }
+
+    mpz_init(op2);    // inicializáljuk a 'c' változót
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    const char hash2[SHA256_DIGEST_LENGTH];
+    char data[] = "example data";
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, data, strlen(data));
+    SHA256_Final(hash, &sha256);
+
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        printf("%02x", hash[i]);
+    }
+    printf("\n");
+    mpz_set_str(op2, hash2, 16);
+    // ellenőrizzük a számot, 25 iterációval
+ printf(" \n");
+    mpz_out_str(stdout,2,op2);
+ printf(" \n");
+    mpz_out_str(stdout,16,op2);
+ printf(" \n");
+
     mpz_clear(op2);
 
     return 0;
