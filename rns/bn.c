@@ -100,7 +100,6 @@ int main()
     mpz_clear(b1);
     mpz_clear(b2);
     mpz_clear(b3);
-    mpz_clear(op2);
     mpz_clear(op1);
 
     mpz_clear(s1);
@@ -110,6 +109,27 @@ int main()
     mpz_clear(sm1);
     mpz_clear(sm2);
     mpz_clear(sm3);
+
+    mpz_set_str(op2, "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", 16);
+    // ellenőrizzük a számot, 25 iterációval
+ printf(" \n");
+    mpz_out_str(stdout,8,op2);
+ printf(" \n");
+    int result = mpz_probab_prime_p(op2, 300);
+
+    if (result == 0)
+    {
+        printf("A szam nem prim.\n");
+    }
+    else if (result == 1)
+    {
+        printf("A szam nagy valoszinuseggel prim.\n");
+    }
+    else
+    {
+        printf("A szam biztosan prim.\n");
+    }
+    mpz_clear(op2);
 
     return 0;
 }
