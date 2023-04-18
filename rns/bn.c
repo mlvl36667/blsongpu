@@ -160,7 +160,6 @@ int main()
 
     mpz_set_str(op2, data2, 16);
 
-    // ellenőrizzük a számot, 25 iterációval
     printf(" \n");
     mpz_out_str(stdout,2,op2);
     printf(" \n");
