@@ -1,6 +1,7 @@
-#include <stdio.h>
 #include <gmp.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <openssl/sha.h>
 
 int main()
@@ -86,13 +87,13 @@ int main()
     }
 
     // kiíratjuk az eredményt
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,16,b1);
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,16,b2);
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,16,a);
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,16,b);
 
     // felszabadítjuk a memóriát
@@ -114,9 +115,9 @@ int main()
 
     mpz_set_str(op2, "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", 16);
     // ellenőrizzük a számot, 25 iterációval
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,8,op2);
- printf(" \n");
+    printf(" \n");
     int result = mpz_probab_prime_p(op2, 300);
 
     if (result == 0)
@@ -136,25 +137,40 @@ int main()
     unsigned char hash[SHA256_DIGEST_LENGTH];
     const char hash2[SHA256_DIGEST_LENGTH];
     char data[] = "example data";
+    char *data2;
+
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, data, strlen(data));
     SHA256_Final(hash, &sha256);
 
+    data2 = (char*)malloc(((SHA256_DIGEST_LENGTH-1)*2+1+1)*sizeof(char));
+    printf(" Hash: \n");
+
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         printf("%02x", hash[i]);
     }
-    printf("\n");
-    mpz_set_str(op2, hash2, 16);
+    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(data2 + i * 2, "%02x", hash[i]);
+    }
+    data2[(SHA256_DIGEST_LENGTH)*2+1] = '\0';
+    printf(" \n");
+    printf(" Data2: \n");
+    printf("%s", data2);
+
+    mpz_set_str(op2, data2, 16);
+
     // ellenőrizzük a számot, 25 iterációval
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,2,op2);
- printf(" \n");
+    printf(" \n");
     mpz_out_str(stdout,16,op2);
- printf(" \n");
+    printf(" \n");
+    mpz_out_str(stdout,10,op2);
+    printf(" \n");
 
     mpz_clear(op2);
+    free(data2);
 
     return 0;
 }
-
