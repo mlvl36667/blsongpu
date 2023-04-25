@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <openssl/sha.h>
+// Compile:  gcc -o bn bn.c -lgmp -lssl -lcrypto 
 
 int main()
 {
     mpz_t a, b, c;
     mpz_t b1, b2, b3;
-    mpz_t op1, op2;
+    mpz_t op1, prime;
     mpz_t s1, s2, s3;
     mpz_t sm1, sm2, sm3;
 
@@ -19,7 +20,7 @@ int main()
     mpz_init(b2);    // inicializáljuk a 'c' változót
     mpz_init(b3);    // inicializáljuk a 'c' változót
     mpz_init(op1);    // inicializáljuk a 'c' változót
-    mpz_init(op2);    // inicializáljuk a 'c' változót
+    mpz_init(prime);    // inicializáljuk a 'c' változót
     mpz_init(s1);    // inicializáljuk a 'c' változót
     mpz_init(s2);    // inicializáljuk a 'c' változót
     mpz_init(s3);    // inicializáljuk a 'c' változót
@@ -30,7 +31,7 @@ int main()
 
     // adjuk meg az 'a' és 'b' értékeit
     mpz_set_str(op1, "18446744073709551615", 10);
-    mpz_set_str(op2, "1", 10);
+    mpz_set_str(prime, "1", 10);
 
     mpz_set_str(b1, "4194303", 10);
     mpz_set_str(b2, "4194304", 10);
@@ -113,12 +114,12 @@ int main()
     mpz_clear(sm2);
     mpz_clear(sm3);
 
-    mpz_set_str(op2, "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", 16);
+    mpz_set_str(prime, "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", 16);
     // ellenőrizzük a számot, 25 iterációval
     printf(" \n");
-    mpz_out_str(stdout,8,op2);
+    mpz_out_str(stdout,16,prime);
     printf(" \n");
-    int result = mpz_probab_prime_p(op2, 300);
+    int result = mpz_probab_prime_p(prime, 300);
 
     if (result == 0)
     {
@@ -133,7 +134,7 @@ int main()
         printf("A szam biztosan prim.\n");
     }
 
-    mpz_init(op2);    // inicializáljuk a 'c' változót
+    mpz_init(prime);    // inicializáljuk a 'c' változót
     unsigned char hash[SHA256_DIGEST_LENGTH];
     const char hash2[SHA256_DIGEST_LENGTH];
     char data[] = "example data";
@@ -158,17 +159,17 @@ int main()
     printf(" Data2: \n");
     printf("%s", data2);
 
-    mpz_set_str(op2, data2, 16);
+    mpz_set_str(prime, data2, 16);
 
     printf(" \n");
-    mpz_out_str(stdout,2,op2);
+    mpz_out_str(stdout,2,prime);
     printf(" \n");
-    mpz_out_str(stdout,16,op2);
+    mpz_out_str(stdout,16,prime);
     printf(" \n");
-    mpz_out_str(stdout,10,op2);
+    mpz_out_str(stdout,10,prime);
     printf(" \n");
 
-    mpz_clear(op2);
+    mpz_clear(prime);
     free(data2);
 
     return 0;
