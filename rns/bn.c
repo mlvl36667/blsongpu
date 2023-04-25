@@ -168,7 +168,72 @@ int main()
     printf(" \n");
     mpz_out_str(stdout,10,prime);
     printf(" \n");
+// -----------------------  //
+// Map 't' to the curve based on ' Fast and simple constant-time hashing to the BLS12-381 elliptic curve ' https://tches.iacr.org/index.php/TCHES/article/view/8348
+// #define B12_P381_MAPU0 "-2"
+// #define B12_P381_MAPU1 "-1"
+//  memcpy(str, B12_P381_MAPU0, sizeof(B12_P381_MAPU0));
+//  fp_read_str(shared_map_u[0], str, 2, 16);
+//  memcpy(str, B12_P381_MAPU1, sizeof(B12_P381_MAPU1));
+//  fp_read_str(shared_map_u[1], str, 2, 16);
+// #define B12_P381_ISO_A0 "0"
+// #define B12_P381_ISO_A1 "F0"
+// #define B12_P381_ISO_B0 "3F4"
+// #define B12_P381_ISO_B1 "3F4"
+ mpz_t a0, a1;
+ mpz_t b0, b1;
+ mpz_t u0, u1;
+ mpz_t t0;
 
+ mpz_init(a0);    
+ mpz_init(a1);    
+ mpz_init(b0);    
+ mpz_init(b1);    
+ mpz_init(u0);    
+ mpz_init(u1);    
+ mpz_init(t0);    
+
+ mpz_set_str(a0, "0", 16);
+ mpz_set_str(a1, "F0", 16);
+ mpz_set_str(b0, "3F4", 16);
+ mpz_set_str(b1, "3F4", 16);
+
+ mpz_set_str(u0, "1", 16);
+ mpz_set_str(u1, "2", 16);
+ mpz_neg(u0,u0);
+ mpz_neg(u1,u1);
+
+ /* c1 = -a */
+ mpz_neg(a1,a1);
+
+ /* c1 = -1 / a */
+// itt a prim testben kell multiplikativ inverzt keresni? meg kell nezni az implementacioban 
+ mpz_div(am1,a1,prime);
+ /* c1 = -b / a */
+ mpz_mul(t0,b0,am1);
+ /* t0 = u * t^2 */
+ /* t1 = u^2 * t^4 */
+ /* t2 = u^2 * t^4 + u * t^2 */ 
+ /* t3 = -u */ 
+ /* t2 = -1/u or 1/(u^2 * t^4 + u*t^2) */
+ /* t3 = 1 + t2 */  
+ /* only add 1 if t2 != -1/u */ 
+ /* -B / A * (1 + 1 / (u^2 * t^4 + u * t^2)) */
+ /* x^2 */ 
+ /* x^2 + a */ 
+ /* x^3 + a x */ 
+ /* x^3 + a x + b */ 
+ /* t2 = u * t^2 * x1 */
+ /* t1 = u^3 * t^6 */  
+ /* t5 = g(t2) = u^3 * t^6 * g(p->x) */
+ /* second sqr */
+ /* t2 = u * t^2 * x1 */
+ /* t1 = t^3 */
+ /* t0 = u^3 */
+ /* t3 = sqrt(u^3) */
+ /* t0 = u * t^2 */
+ /* t3 = -u */  
+ /* t5 = g(t2) = u^3 * t^6 * g(p->x) */ 
     mpz_clear(prime);
     free(data2);
 
