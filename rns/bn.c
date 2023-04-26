@@ -180,10 +180,16 @@ int main()
 // #define B12_P381_ISO_A1 "F0"
 // #define B12_P381_ISO_B0 "3F4"
 // #define B12_P381_ISO_B1 "3F4"
+
+ printf(" Now constructing t...\n");
+ mpz_set_str(prime, "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", 16);
+
  mpz_t a0, a1;
- mpz_t b0, b1;
+ mpz_t b0, am1;
  mpz_t u0, u1;
  mpz_t t0;
+ mpz_t t_0, t_1;
+ mpz_t t0p, t1p;
 
  mpz_init(a0);    
  mpz_init(a1);    
@@ -192,6 +198,11 @@ int main()
  mpz_init(u0);    
  mpz_init(u1);    
  mpz_init(t0);    
+ mpz_init(t0p);    
+ mpz_init(t1p);    
+
+ mpz_init(t_0);    
+ mpz_init(t_1);    
 
  mpz_set_str(a0, "0", 16);
  mpz_set_str(a1, "F0", 16);
@@ -200,17 +211,36 @@ int main()
 
  mpz_set_str(u0, "1", 16);
  mpz_set_str(u1, "2", 16);
- mpz_neg(u0,u0);
- mpz_neg(u1,u1);
 
- /* c1 = -a */
- mpz_neg(a1,a1);
+ mpz_set_str(t_0, "79B345FCB6BA31434774A5A506F53E0A32F4E9BC1B73CFB6D7720A61BA00962E9FD3CF91746801920C63E458DFB9FC17ABAC01801BEE343ADFA63C0938BB0478", 16);
+ mpz_set_str(t_1, "D5EC78C1A4ACF30FB791DD5B6CE1FCA772C04D33FCB5FB78F8C36C873436304346AC1D586448C4590DAB5B9AB4EEECB942E6A1C073640D3605EA1464CFBA0DC7", 16);
 
- /* c1 = -1 / a */
-// itt a prim testben kell multiplikativ inverzt keresni? meg kell nezni az implementacioban 
- mpz_div(am1,a1,prime);
- /* c1 = -b / a */
- mpz_mul(t0,b0,am1);
+ mpz_mod(t0p,t_0,prime);
+ mpz_mod(t1p,t_1,prime);
+
+ printf(" \n");
+ mpz_out_str(stdout,16,t_0);
+ printf(" \n");
+ mpz_out_str(stdout,16,t_1);
+ printf(" \n");
+
+ printf(" \n");
+ mpz_out_str(stdout,16,t0p);
+ printf(" \n");
+ mpz_out_str(stdout,16,t1p);
+ printf(" \n");
+
+//  mpz_neg(u0,u0);
+//  mpz_neg(u1,u1);
+// 
+//  /* c1 = -a */
+//  mpz_neg(a1,a1);
+// 
+//  /* c1 = -1 / a */
+// // itt a prim testben kell multiplikativ inverzt keresni? meg kell nezni az implementacioban 
+//  mpz_div(am1,a1,prime);
+//  /* c1 = -b / a */
+//  mpz_mul(t0,b0,am1);
  /* t0 = u * t^2 */
  /* t1 = u^2 * t^4 */
  /* t2 = u^2 * t^4 + u * t^2 */ 
@@ -235,6 +265,10 @@ int main()
  /* t3 = -u */  
  /* t5 = g(t2) = u^3 * t^6 * g(p->x) */ 
     mpz_clear(prime);
+
+    mpz_clear(t_0);
+    mpz_clear(t_1);
+
     free(data2);
 
     return 0;
