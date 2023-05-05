@@ -2,7 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <openssl/sha.h>
+#include <sys/time.h>
 // Compile:  gcc -o bn bn.c -lgmp -lssl -lcrypto 
 // The results is: 
 // 19C38BACB92FE1AB DB60CB93953905D4 6074A7272E38D5B1 1BE58CE84F66949E 7C892A9D9BA26B3B 6E5762510852B323
@@ -101,7 +103,13 @@
 // 0C7A1C10848E8C8F CFDD9F84C0BB53A0 8B071F303A3AAD05 4ACF8648075FB8D5 B21C5662E3DC7ABA 093ED39930F0A720
 
 
-void rns_sum(mpz_t c, mpz_t a, mpz_t b){
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned long long int x;
+    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+    return x;
+}
+void rns_sum(mpz_t c, mpz_t a, mpz_t b, int exp){
 // calculate c = a + b using rns representations
  mpz_t b1, b2, b3;
  mpz_t s1, s2, s3;
@@ -110,6 +118,15 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b){
  mpz_t res11, res22, res33;
  mpz_t ap1, ap2, ap3;
  mpz_t bp1, bp2, bp3;
+ mpz_t one, two;
+
+ unsigned long long start, end;
+
+
+ mpz_init(one);    
+ mpz_init(two);    
+ mpz_set_str(one, "1", 16);
+ mpz_set_str(two, "2", 16);
 
  mpz_init(ap1);    
  mpz_init(ap2);    
@@ -139,16 +156,32 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b){
  mpz_init(res22);    
  mpz_init(res33);    
 
- printf("op1 in rns_sum: \n");
- mpz_out_str(stdout,10,a);
+ printf("op1: \n");
+ mpz_out_str(stdout,16,a);
  printf(" \n");
- printf("op2 in rns_sum: \n");
- mpz_out_str(stdout,10,b);
+ printf("op2: \n");
+ mpz_out_str(stdout,16,b);
+ printf(" \n");
+// New Multi-Moduli Residue and Quadratic Residue Systems for Large Dynamic Ranges (Mohammad Abdallah and Alexander Skavantzos)
+// https://ieeexplore.ieee.org/document/540842
+// The most popular such sets are the 3-moduli set (2^{n}-1, 2^{n}, 2^{n}+1) and the 4-moduli set (2^{n-1}-1, 2^{n}-1, 2^{n+1}-1, 2^{n+1}) for even n .
+ mpz_pow_ui(b2,two,exp);
+ mpz_sub(b1,b2,one);
+ mpz_add(b3,b2,one);
+
+ printf("p1: \n");
+ mpz_out_str(stdout,10,b1);
+ printf(" \n");
+ printf("p2: \n");
+ mpz_out_str(stdout,10,b2);
+ printf(" \n");
+ printf("p3: \n");
+ mpz_out_str(stdout,10,b3);
  printf(" \n");
 
- mpz_set_str(b1, "4194303", 10);
- mpz_set_str(b2, "4194304", 10);
- mpz_set_str(b3, "4194305", 10);
+// mpz_set_str(b1, "4194303", 10);
+// mpz_set_str(b2, "4194304", 10);
+// mpz_set_str(b3, "4194305", 10);
 
  mpz_mul(s1, b2, b3);
  mpz_mul(s2, b1, b3);
@@ -163,6 +196,7 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b){
  mpz_invert(sm2, s2, b2);
  mpz_invert(sm3, s3, b3);
 
+ start = rdtsc();
  mpz_mod(ap1,a,b1);
  mpz_mod(ap2,a,b2);
  mpz_mod(ap3,a,b3);
@@ -203,11 +237,32 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b){
 
  mpz_mod(res1,res22,res3);
 
- printf("result in rns_sum: \n");
- mpz_out_str(stdout,10,res1);
+ end = rdtsc();
+ printf("Elapsed clock cycles: %llu\n", end - start);
+
+ printf("res using rns: \n");
+ mpz_out_str(stdout,16,res1);
  printf(" \n");
+
+ printf("p1*p2*..pn : \n");
+ mpz_out_str(stdout,16,res3);
+ printf(" \n");
+
+
+ start = rdtsc();
+ mpz_add(c,a,b);
+ end = rdtsc();
+ printf("Elapsed clock cycles: %llu\n", end - start);
+
+
+
+ printf("res using MPZ: \n");
+ mpz_out_str(stdout,16,c);
+ printf(" \n");
+
+ return;
 }
-int main()
+int main(int argc, char *argv[])
 {
     mpz_t a, b, c;
     mpz_t b1, b2, b3;
@@ -417,12 +472,17 @@ int main()
  mpz_set_str(u0, "1", 16);
  mpz_set_str(u1, "2", 16);
 
- mpz_set_str(t_0, "20", 16);
+// mpz_set_str(t_0, "3ffffffffffbffffe", 16);
+// mpz_set_str(t_0, "3ffffffffffc00000", 16);
+// mpz_set_str(t_1, "1", 16);
 
- mpz_set_str(t_1, "1", 16);
+// mpz_sub(op1,t_0,t_1);
+// printf("sub: \n");
+// mpz_out_str(stdout,16,op1);
+// printf(" \n");
 
-// mpz_set_str(t_0, "79B345FCB6BA31434774A5A506F53E0A32F4E9BC1B73CFB6D7720A61BA00962E9FD3CF91746801920C63E458DFB9FC17ABAC01801BEE343ADFA63C0938BB0478", 16);
-// mpz_set_str(t_1, "D5EC78C1A4ACF30FB791DD5B6CE1FCA772C04D33FCB5FB78F8C36C873436304346AC1D586448C4590DAB5B9AB4EEECB942E6A1C073640D3605EA1464CFBA0DC7", 16);
+ mpz_set_str(t_0, "79B345FCB6BA31434774A5A506F53E0A32F4E9BC1B73CFB6D7720A61BA00962E9FD3CF91746801920C63E458DFB9FC17ABAC01801BEE343ADFA63C0938BB0478", 16);
+ mpz_set_str(t_1, "D5EC78C1A4ACF30FB791DD5B6CE1FCA772C04D33FCB5FB78F8C36C873436304346AC1D586448C4590DAB5B9AB4EEECB942E6A1C073640D3605EA1464CFBA0DC7", 16);
 
  mpz_mod(t0p,t_0,prime);
  mpz_mod(t1p,t_1,prime);
@@ -438,8 +498,8 @@ int main()
 // printf(" \n");
 // mpz_out_str(stdout,16,t1p);
 // printf(" \n");
-
- rns_sum(t00,t_0,t_1);
+ int exp = atoi(argv[1]);
+ rns_sum(t00,t0p,t1p,exp);
 
 //  mpz_neg(u0,u0);
 //  mpz_neg(u1,u1);
