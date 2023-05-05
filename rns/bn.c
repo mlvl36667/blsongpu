@@ -101,6 +101,112 @@
 // 0C7A1C10848E8C8F CFDD9F84C0BB53A0 8B071F303A3AAD05 4ACF8648075FB8D5 B21C5662E3DC7ABA 093ED39930F0A720
 
 
+void rns_sum(mpz_t c, mpz_t a, mpz_t b){
+// calculate c = a + b using rns representations
+ mpz_t b1, b2, b3;
+ mpz_t s1, s2, s3;
+ mpz_t sm1, sm2, sm3;
+ mpz_t res1, res2, res3;
+ mpz_t res11, res22, res33;
+ mpz_t ap1, ap2, ap3;
+ mpz_t bp1, bp2, bp3;
+
+ mpz_init(ap1);    
+ mpz_init(ap2);    
+ mpz_init(ap3);    
+
+ mpz_init(bp1);    
+ mpz_init(bp2);    
+ mpz_init(bp3);    
+
+ mpz_init(b1);    
+ mpz_init(b2);    
+ mpz_init(b3);    
+
+ mpz_init(s1);    
+ mpz_init(s2);    
+ mpz_init(s3);    
+
+ mpz_init(sm1);    
+ mpz_init(sm2);    
+ mpz_init(sm3);    
+
+ mpz_init(res1);    
+ mpz_init(res2);    
+ mpz_init(res3);    
+
+ mpz_init(res11);    
+ mpz_init(res22);    
+ mpz_init(res33);    
+
+ printf("op1 in rns_sum: \n");
+ mpz_out_str(stdout,10,a);
+ printf(" \n");
+ printf("op2 in rns_sum: \n");
+ mpz_out_str(stdout,10,b);
+ printf(" \n");
+
+ mpz_set_str(b1, "4194303", 10);
+ mpz_set_str(b2, "4194304", 10);
+ mpz_set_str(b3, "4194305", 10);
+
+ mpz_mul(s1, b2, b3);
+ mpz_mul(s2, b1, b3);
+ mpz_mul(s3, b1, b2);
+//    printf(" \n");
+//    mpz_out_str(stdout,10,s1);
+//    printf(" \n");
+//    mpz_out_str(stdout,10,s2);
+//    printf(" \n");
+//    mpz_out_str(stdout,10,s3);
+ mpz_invert(sm1, s1, b1);
+ mpz_invert(sm2, s2, b2);
+ mpz_invert(sm3, s3, b3);
+
+ mpz_mod(ap1,a,b1);
+ mpz_mod(ap2,a,b2);
+ mpz_mod(ap3,a,b3);
+
+ mpz_mod(bp1,b,b1);
+ mpz_mod(bp2,b,b2);
+ mpz_mod(bp3,b,b3);
+
+ mpz_add(res1,ap1,bp1);
+ mpz_mod(res11,res1,b1);
+
+ mpz_add(res2,ap2,bp2);
+ mpz_mod(res22,res2,b2);
+
+ mpz_add(res3,ap3,bp3);
+ mpz_mod(res33,res3,b3);
+
+// restore
+ mpz_mul(res1,res11,sm1);
+ mpz_mod(res11,res1,b1);
+ mpz_mul(res2,res22,sm2);
+ mpz_mod(res22,res2,b2);
+ mpz_mul(res3,res33,sm3);
+ mpz_mod(res33,res3,b3);
+
+ mpz_mul(res1,res11,s1);
+// mpz_mod(res11,res1,b1);
+ mpz_mul(res2,res22,s2);
+// mpz_mod(res22,res2,b2);
+ mpz_mul(res3,res33,s3);
+// mpz_mod(res33,res3,b3);
+
+ mpz_add(res11,res1,res2);
+ mpz_add(res22,res11,res3);
+
+ mpz_mul(res1,b1,b2);
+ mpz_mul(res3,res1,b3);
+
+ mpz_mod(res1,res22,res3);
+
+ printf("result in rns_sum: \n");
+ mpz_out_str(stdout,10,res1);
+ printf(" \n");
+}
 int main()
 {
     mpz_t a, b, c;
@@ -286,6 +392,9 @@ int main()
  mpz_t t0;
  mpz_t t_0, t_1;
  mpz_t t0p, t1p;
+ mpz_t t00;
+
+ mpz_init(t00);    
 
  mpz_init(a0);    
  mpz_init(a1);    
@@ -308,23 +417,28 @@ int main()
  mpz_set_str(u0, "1", 16);
  mpz_set_str(u1, "2", 16);
 
- mpz_set_str(t_0, "79B345FCB6BA31434774A5A506F53E0A32F4E9BC1B73CFB6D7720A61BA00962E9FD3CF91746801920C63E458DFB9FC17ABAC01801BEE343ADFA63C0938BB0478", 16);
- mpz_set_str(t_1, "D5EC78C1A4ACF30FB791DD5B6CE1FCA772C04D33FCB5FB78F8C36C873436304346AC1D586448C4590DAB5B9AB4EEECB942E6A1C073640D3605EA1464CFBA0DC7", 16);
+ mpz_set_str(t_0, "20", 16);
+ mpz_set_str(t_1, "1", 16);
+
+// mpz_set_str(t_0, "79B345FCB6BA31434774A5A506F53E0A32F4E9BC1B73CFB6D7720A61BA00962E9FD3CF91746801920C63E458DFB9FC17ABAC01801BEE343ADFA63C0938BB0478", 16);
+// mpz_set_str(t_1, "D5EC78C1A4ACF30FB791DD5B6CE1FCA772C04D33FCB5FB78F8C36C873436304346AC1D586448C4590DAB5B9AB4EEECB942E6A1C073640D3605EA1464CFBA0DC7", 16);
 
  mpz_mod(t0p,t_0,prime);
  mpz_mod(t1p,t_1,prime);
 
- printf(" \n");
- mpz_out_str(stdout,16,t_0);
- printf(" \n");
- mpz_out_str(stdout,16,t_1);
- printf(" \n");
+// printf(" \n");
+// mpz_out_str(stdout,16,t_0);
+// printf(" \n");
+// mpz_out_str(stdout,16,t_1);
+// printf(" \n");
+//
+// printf(" \n");
+// mpz_out_str(stdout,16,t0p);
+// printf(" \n");
+// mpz_out_str(stdout,16,t1p);
+// printf(" \n");
 
- printf(" \n");
- mpz_out_str(stdout,16,t0p);
- printf(" \n");
- mpz_out_str(stdout,16,t1p);
- printf(" \n");
+ rns_sum(t00,t_0,t_1);
 
 //  mpz_neg(u0,u0);
 //  mpz_neg(u1,u1);
