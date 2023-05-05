@@ -119,10 +119,12 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b, int exp){
  mpz_t ap1, ap2, ap3;
  mpz_t bp1, bp2, bp3;
  mpz_t one, two;
+ mpz_t mm;
 
  unsigned long long start, end;
 
 
+ mpz_init(mm);    
  mpz_init(one);    
  mpz_init(two);    
  mpz_set_str(one, "1", 16);
@@ -168,6 +170,9 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b, int exp){
  mpz_pow_ui(b2,two,exp);
  mpz_sub(b1,b2,one);
  mpz_add(b3,b2,one);
+
+ mpz_mul(res1,b1,b2);
+ mpz_mul(mm,res1,b3);
 
  printf("p1: \n");
  mpz_out_str(stdout,10,b1);
@@ -232,10 +237,8 @@ void rns_sum(mpz_t c, mpz_t a, mpz_t b, int exp){
  mpz_add(res11,res1,res2);
  mpz_add(res22,res11,res3);
 
- mpz_mul(res1,b1,b2);
- mpz_mul(res3,res1,b3);
 
- mpz_mod(res1,res22,res3);
+ mpz_mod(res1,res22,mm);
 
  end = rdtsc();
  printf("Elapsed clock cycles: %llu\n", end - start);
